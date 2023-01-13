@@ -85,7 +85,7 @@ def plot_accuracy_probes(config):
 
     if config["save"]:
         if N_probes == 3:
-            imgname = config["filenames"][1].replace("../results/results_", "")
+            imgname = config["filenames"][1].replace("../results/test_results_", "")
             imgname = imgname.replace(
                 ".pickle", f'{"_transformeronly" if config["only_transformer"] else ""}'
             )
@@ -98,14 +98,14 @@ def plot_accuracy_probes(config):
                 + ".png"
             )
         elif N_probes == 2:
-            imgname = config["filenames"][1].replace("../results/results_", "")
+            imgname = config["filenames"][1].replace("../results/test_results_", "")
             imgname = imgname.replace(
                 ".pickle",
                 f'{"_transformeronly.png" if config["only_transformer"] else ".png"}',
             )
             imgname = config["filenames"][0].replace(".pickle", "") + imgname
         elif N_probes == 1:
-            imgname = config["filenames"][0].replace("../results/results_", "")
+            imgname = config["filenames"][0].replace("../results/test_results_", "")
             imgname = imgname.replace(
                 ".pickle",
                 f'{"_transformeronly.png" if config["only_transformer"] else ".png"}',
@@ -123,8 +123,8 @@ if __name__ == "__main__":
     config = {
         "no_plots": 2,
         "filenames": [
-            "../results/results_MLP_sup1_n_colors_unbalanced_no_layernorm.pickle",
-            "../results/results_MLP_sup1_n_colors_balanced_no_layernorm.pickle",
+            "../results/test_results_MLP_sup1_n_colors_unbalanced_no_layernorm.pickle",
+            "../results/test_results_MLP_sup1_n_colors_balanced_no_layernorm.pickle",
         ],
         "labels": ["unbalanced", "balanced"],
         "info_fig": "(sup1, n_objects, MLP)",
