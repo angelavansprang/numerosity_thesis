@@ -66,23 +66,23 @@ def build_dataloader(
     inputs = []
     targets = []
 
-    # if balanced:
-    #     balanced_labels, _ = make_balanced_data(labels, objective)
+    if balanced:
+        balanced_labels, _ = make_balanced_data(labels, objective)
 
     for img_id, repr in repr.items():
-        # if balanced:
-        #     if int(img_id) in balanced_labels.keys():
-        #         input = repr[layer].flatten()  # flatten the representations!
-        #         label = int(labels[int(img_id)][objective])
-        #         label = label2class[label]
-        #         inputs.append(input)
-        #         targets.append(label)
-        # else:
-        input = repr[layer].flatten()  # flatten the representations!
-        label = int(labels[int(img_id)][objective])
-        label = label2class[label]
-        inputs.append(input)
-        targets.append(label)
+        if balanced:
+            if int(img_id) in balanced_labels.keys():
+                input = repr[layer].flatten()  # flatten the representations!
+                label = int(labels[int(img_id)][objective])
+                label = label2class[label]
+                inputs.append(input)
+                targets.append(label)
+        else:
+            input = repr[layer].flatten()  # flatten the representations!
+            label = int(labels[int(img_id)][objective])
+            label = label2class[label]
+            inputs.append(input)
+            targets.append(label)
 
     dataset_train = list(zip(inputs, targets))
     print("len dataset: ", len(dataset_train))
@@ -250,6 +250,9 @@ def experiment_per_layer(
         loader_val, class2label = build_dataloader(
             dataset, layer, split="val", balanced=balanced, objective=objective
         )
+        loader_test, class2label = build_dataloader(
+            dataset, layer, split="test", balanced=balanced, objective=objective
+        )
 
         for i in range(5):
             if modelname == "linear_layer":
@@ -264,13 +267,14 @@ def experiment_per_layer(
                 enable_progress_bar=False,
             )
             train_info = trainer.fit(model, loader_train, loader_val)
-            performance = trainer.validate(model, loader_val)
+            # performance = trainer.validate(model, loader_val)
+            performance = trainer.test(loader_test)
 
             # performance = train_model(model, loader_train, loader_val)
             results[layer].append(performance[0]["acc"])
-            # if save_models:
-            #     models[layer].append(model)
-            #     # TODO: ADD SAVING?
+            if save_models:
+                save_models_path = f'../models/{modelname}_{i}_{dataset}_{objective}_{"balanced" if balanced else "unbalanced"}_{"layernorm" if layernorm else "no_layernorm"}.pt'
+                torch.save(model.state_dict(), save_models_path)
 
     return results
 
@@ -320,7 +324,7 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     results = experiment_per_layer(
-        objective, dataset, modelname=modelname, balanced=balanced, layernorm=layernorm
+        objective, dataset, modelname=modelname, balanced=balanced, layernorm=layernorm, save_models=True
     )
 
     # results = test_experiment_per_layer(objective, dataset, models, balanced)
