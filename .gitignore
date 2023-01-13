@@ -4,7 +4,10 @@
 !/malevic-master/code/train_probe.py
 !/malevic-master/code/utils.py
 !/malevic-master/code/visualize_result.py
+!/malevic-master/code/evaluate_errors.py
+!/malevic-master/code/models.py
 !/malevic-master/results
+!/malevic-master/plots
 
 /PyJSONViewer-1.6.0
 

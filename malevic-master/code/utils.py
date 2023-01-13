@@ -7,12 +7,37 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import os
 import pickle
+from torch.utils.data import DataLoader
+import models
 
 sys.path.append("../../")
 import Transformer_MM_Explainability.CLIP.clip as clip
 
 # GLOBAL VARIABLES
 global_path = ".."
+
+
+# Use this dictionary to find the number of layers necessary for the linear probe,
+# (the input size of the linear probe depends on the size of the representations)
+layer2size = {
+    0: 50 * 768,
+    1: 50 * 768,
+    2: 50 * 768,
+    3: 50 * 768,
+    4: 50 * 768,
+    5: 50 * 768,
+    6: 50 * 768,
+    7: 50 * 768,
+    8: 50 * 768,
+    9: 50 * 768,
+    10: 50 * 768,
+    11: 50 * 768,
+    12: 50 * 768,
+    13: 50 * 768,
+    14: 50 * 768,
+    15: 768,
+    16: 512,
+}
 
 
 def get_annotation(dataset, split="train"):
@@ -43,6 +68,16 @@ def get_model_preprocess(device, model_type="ViT-L/14"):
 #     img = preprocess(Image.open(img_path)).unsqueeze(0).to(device)
 #     image_features = model.encode_image(img)
 #     return image_features
+
+
+def open_model(D_in, D_out, layernorm, modelname):
+    if modelname == "linear_layer":
+        model = models.ProbingHead(D_in, D_out)
+    elif modelname == "MLP":
+        model = models.MLP(D_out=D_out, width=D_in, layernorm=layernorm)
+    elif modelname == "MLP2":
+        model = models.MLP2(input_size=D_in, output_size=D_out, layernorm=layernorm)
+    return model
 
 
 def get_repr(img_path, device, model, preprocess):
@@ -165,6 +200,10 @@ def make_balanced_data(labels, objective):
 def get_classlabel(dataset, split="train", objective="n_colors"):
     """
     objective (string): n_colors/ n_objects
+
+    returns:
+    class2label (dict): from learning class to actual label (e.g. n_colors=5)
+    label2class (dict): from actual label (e.g. n_colors=5) to class (e.g. 3)
     """
     labels = make_labels_dict(dataset, split)
     count = get_freqs_labels(labels, objective)
@@ -199,39 +238,6 @@ def get_freq_plot(objective="n_colors", split="train", save=True):
     if save:
         plt.savefig(f"freq_{objective}_{split}.png", bbox_inches="tight")
     plt.show()
-
-
-# def make_representations(
-#     device, model, preprocess, dataset, split="train", to_store=False
-# ):
-#     """Gets visual representations of the images using CLIP (ViT)
-
-#     Input:
-#     img_ids (list): img_ids as integer with '.png'
-
-#     Stores:
-#     clip_data_vis (dict): img_id is key, value is the tensor (of last layer)
-#     """
-#     path = f"{global_path}/data/{dataset}/images/{split}/"
-
-#     img_ids = os.listdir(path)
-#     visual_repr_name = f"final_layer_{split}.pickle"
-
-#     clip_data_vis = {}
-
-#     for img_name in tqdm(img_ids):
-#         img_path = path + img_name
-#         img_id = img_name.replace(".png", "")
-
-#         image_features = get_repr(img_path, device, model, preprocess)
-
-#         clip_data_vis[img_id] = image_features.cpu().detach().numpy()[0]
-#         del image_features
-
-#     if to_store:
-#         file_path = f"{global_path}/data/{dataset}/representations/"
-#         with open(file_path + visual_repr_name, "wb") as f:
-#             pickle.dump(clip_data_vis, f)
 
 
 def make_representations_visual(
@@ -297,6 +303,68 @@ def make_representations_visual(
         if to_store:
             with open(file_path + visual_repr_name, "wb") as f:
                 pickle.dump(clip_data_vis, f)
+
+
+def build_dataloader(
+    dataset, layer, split="train", balanced=True, objective="n_objects", batch_size=10
+):
+    """Return dataloaders with the (visual) CLIP representations as data and labels whether
+    the text and image match. Only add data to the dataloaders if the maximum for
+    that class is not yet reached.
+    NOTE: REQUIRES THAT THE REPRESENTATIONS ARE ALREADY MADE
+
+    Input:
+    ids_val (list): contains ints of the IDs of the images that should be in the validation set.
+    balanced (bool): whether the dataloaders should be made balanced (i.e. same number of instances per class)
+    objective (string): either 'n_objects' or 'n_colors'
+
+    TODO: IMPLEMENT BALANCED == TRUE. Current implementation not yet working, due to mismatch in shapes (in both MLP and MLP2)
+    Try new approach using the representations already present, and selecting the correct ones based on selection function from utils.py
+    """
+
+    class2label, label2class = get_classlabel(dataset, split=split, objective=objective)
+    labels = make_labels_dict(dataset, split=split)
+    # if balanced:
+    #     repr_path = f"../data/{dataset}/representations/{dataset}_{split}_balanced_{objective}_visual.pickle"
+    # else:
+    #     repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
+    repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
+
+    print(f"Will try to open representations of {dataset} of split {split}")
+    print(f"Balanced is: {balanced}")
+    with open(repr_path, "rb") as f:
+        repr = pickle.load(f)
+
+    inputs = []
+    targets = []
+
+    if balanced:
+        balanced_labels, _ = make_balanced_data(labels, objective)
+
+    for img_id, repr in repr.items():
+        if balanced:
+            if int(img_id) in balanced_labels.keys():
+                input = repr[layer].flatten()  # flatten the representations!
+                label = int(labels[int(img_id)][objective])
+                label = label2class[label]
+                inputs.append(input)
+                targets.append(label)
+        else:
+            input = repr[layer].flatten()  # flatten the representations!
+            label = int(labels[int(img_id)][objective])
+            label = label2class[label]
+            inputs.append(input)
+            targets.append(label)
+
+    dataset_train = list(zip(inputs, targets))
+    print("len dataset: ", len(dataset_train))
+
+    if split == "train":
+        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
+    else:
+        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=False)
+
+    return dataloader, class2label
 
 
 if __name__ == "__main__":
