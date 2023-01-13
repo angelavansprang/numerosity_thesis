@@ -121,6 +121,11 @@ class ProbingHead(pl.LightningModule):
         self.log("val_loss", loss)
         self.log("acc", torch.sum(torch.argmax(out, dim=1) == y).item() / x.shape[0])
 
+    def test_step(self, test_batch, batch_idx):
+        x, y = test_batch
+        out = self.forward(x)
+        self.log("acc", torch.sum(torch.argmax(out, dim=1) == y).item() / x.shape[0])
+
 
 class LayerNorm(nn.LayerNorm):
     """Subclass torch's LayerNorm to handle fp16."""
@@ -176,6 +181,11 @@ class MLP(pl.LightningModule):
         self.log("val_loss", loss)
         self.log("acc", torch.sum(torch.argmax(out, dim=1) == y).item() / x.shape[0])
 
+    def test_step(self, test_batch, batch_idx):
+        x, y = test_batch
+        out = self.forward(x)
+        self.log("acc", torch.sum(torch.argmax(out, dim=1) == y).item() / x.shape[0])
+
 
 class MLP2(pl.LightningModule):
     def __init__(self, input_size, output_size, hidden_size=512, layernorm=False):
@@ -220,6 +230,11 @@ class MLP2(pl.LightningModule):
         out = self.forward(x)
         loss = F.cross_entropy(out, y)
         self.log("val_loss", loss)
+        self.log("acc", torch.sum(torch.argmax(out, dim=1) == y).item() / x.shape[0])
+
+    def test_step(self, test_batch, batch_idx):
+        x, y = test_batch
+        out = self.forward(x)
         self.log("acc", torch.sum(torch.argmax(out, dim=1) == y).item() / x.shape[0])
 
 
@@ -268,7 +283,7 @@ def experiment_per_layer(
             )
             train_info = trainer.fit(model, loader_train, loader_val)
             # performance = trainer.validate(model, loader_val)
-            performance = trainer.test(loader_test)
+            performance = trainer.test(dataloaders=loader_test)
 
             # performance = train_model(model, loader_train, loader_val)
             results[layer].append(performance[0]["acc"])
@@ -324,7 +339,12 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     results = experiment_per_layer(
-        objective, dataset, modelname=modelname, balanced=balanced, layernorm=layernorm, save_models=True
+        objective,
+        dataset,
+        modelname=modelname,
+        balanced=balanced,
+        layernorm=layernorm,
+        save_models=True,
     )
 
     # results = test_experiment_per_layer(objective, dataset, models, balanced)
