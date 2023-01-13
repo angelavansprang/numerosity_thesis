@@ -8,6 +8,7 @@ import pytorch_lightning as pl
 from torch import nn
 from torch.nn import functional as F
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+import argparse
 
 
 # Use this dictionary to find the number of layers necessary for the linear probe,
@@ -250,9 +251,6 @@ def experiment_per_layer(
     elif objective == "n_objects":
         D_out = 5
 
-    # if save_models:
-    #     models = defaultdict(lambda: [])
-
     results = defaultdict(lambda: [])
 
     for layer, size in tqdm(layer2size.items()):
@@ -288,7 +286,7 @@ def experiment_per_layer(
             # performance = train_model(model, loader_train, loader_val)
             results[layer].append(performance[0]["acc"])
             if save_models:
-                save_models_path = f'../models/{modelname}_{i}_{dataset}_{objective}_{"balanced" if balanced else "unbalanced"}_{"layernorm" if layernorm else "no_layernorm"}.pt'
+                save_models_path = f'../models/{modelname}_layer{layer}_{i}_{dataset}_{objective}_{"balanced" if balanced else "unbalanced"}_{"layernorm" if layernorm else "no_layernorm"}.pt'
                 torch.save(model.state_dict(), save_models_path)
 
     return results
@@ -329,22 +327,24 @@ def test_experiment_per_layer(objective, dataset, models, balanced):
 
 if __name__ == "__main__":
 
-    # parameters
-    dataset = "sup1"
-    objective = "n_colors"
-    balanced = False
-    modelname = "MLP"
-    layernorm = False
+    parser = argparse.ArgumentParser(description="Train a probe on representations ViT")
+    parser.add_argument("--dataset", choices=["sup1", "pos"], required=True)
+    parser.add_argument("--objective", choices=["n_colors", "n_objects"], required=True)
+    parser.add_argument("--balanced", action="store_true")
+    parser.add_argument("--modelname", choices=["linear_layer", "MLP", "MLP2"])
+    parser.add_argument("--layernorm", action="store_true")
+    parser.add_argument("--save_models", action="store_true")
+    args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     results = experiment_per_layer(
-        objective,
-        dataset,
-        modelname=modelname,
-        balanced=balanced,
-        layernorm=layernorm,
-        save_models=True,
+        args.objective,
+        args.dataset,
+        modelname=args.modelname,
+        balanced=args.balanced,
+        layernorm=args.layernorm,
+        save_models=args.save_models,
     )
 
     # results = test_experiment_per_layer(objective, dataset, models, balanced)
@@ -357,7 +357,7 @@ if __name__ == "__main__":
     results_tosave = dict(results)
     with open(
         results_path
-        + f'test_results_{modelname}_{dataset}_{objective}_{"balanced" if balanced else "unbalanced"}_{"layernorm" if layernorm else "no_layernorm"}.pickle',
+        + f'test_results_{args.modelname}_{args.dataset}_{args.objective}_{"balanced" if args.balanced else "unbalanced"}_{"layernorm" if args.layernorm else "no_layernorm"}.pickle',
         "wb",
     ) as f:
         pickle.dump(results_tosave, f)
