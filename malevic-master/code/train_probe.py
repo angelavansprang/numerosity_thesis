@@ -23,7 +23,7 @@ def experiment_per_layer(
 
     results = defaultdict(lambda: [])
 
-    for layer, size in models.layer2size.items():
+    for layer, size in utils.layer2size.items():
         print(f"Started with layer {layer} of size {size}")
         D_in = size
 
@@ -39,63 +39,21 @@ def experiment_per_layer(
 
         for i in range(5):
             model = utils.open_model(D_in, D_out, layernorm, modelname)
-            # if modelname == "linear_layer":
-            #     model = models.ProbingHead(D_in, D_out)
-            # elif modelname == "MLP":
-            #     model = models.MLP(D_out=D_out, width=D_in, layernorm=layernorm)
-            # elif modelname == "MLP2":
-            #     model = models.MLP2(
-            #         input_size=D_in, output_size=D_out, layernorm=layernorm
-            #     )
             trainer = pl.Trainer(
                 accelerator="gpu",
                 callbacks=[EarlyStopping(monitor="val_loss", mode="min")],
                 enable_progress_bar=False,
+                log_every_n_steps=100,
             )
             train_info = trainer.fit(model, loader_train, loader_val)
-            # performance = trainer.validate(model, loader_val)
             performance = trainer.test(dataloaders=loader_test)
 
-            # performance = train_model(model, loader_train, loader_val)
             results[layer].append(performance[0]["acc"])
             if save_models:
                 save_models_path = f'../models/{modelname}_layer{layer}_{i}_{dataset}_{objective}_{"balanced" if balanced else "unbalanced"}_{"layernorm" if layernorm else "no_layernorm"}.pt'
                 torch.save(model.state_dict(), save_models_path)
 
     return results
-
-
-# def train_model(model, loader_train, loader_val):
-#     trainer = pl.Trainer(
-#         accelerator="gpu",
-#         callbacks=[EarlyStopping(monitor="val_loss", mode="min")],
-#         enable_progress_bar=False,
-#     )
-#     train_info = trainer.fit(model, loader_train, loader_val)
-#     performance = trainer.validate(model, loader_val)
-#     return performance
-
-
-# def test_model(model, loader_test):
-#     trainer = pl.Trainer(
-#         accelerator="gpu",
-#         callbacks=[EarlyStopping(monitor="val_loss", mode="min")],
-#         enable_progress_bar=False,
-#     )
-#     performance = trainer.test(model, dataloaders=loader_test)
-#     return performance
-
-
-# def test_experiment_per_layer(objective, dataset, models, balanced):
-#     results = defaultdict(lambda: [])
-#     for layer, _ in tqdm(layer2size.items()):
-#         loader_test, _ = build_dataloader(
-#             dataset, layer, split="test", balanced=balanced, objective=objective
-#         )
-#         for model in models[layer]:
-#             performance = test_model(model, loader_test)
-#             results[layer].append(performance[0]["acc"])
-#     return results
 
 
 if __name__ == "__main__":
@@ -119,11 +77,6 @@ if __name__ == "__main__":
         layernorm=args.layernorm,
         save_models=args.save_models,
     )
-
-    # results = test_experiment_per_layer(objective, dataset, models, balanced)
-
-    # print(results)
-    # TODO: check how results look like after testing, and change it so that I can make a confusion matrix
 
     results_path = "../results/"
 

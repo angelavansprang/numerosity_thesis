@@ -104,6 +104,7 @@ def plot_accuracy_probes(config):
                 f'{"_transformeronly.png" if config["only_transformer"] else ".png"}',
             )
             imgname = config["filenames"][0].replace(".pickle", "") + imgname
+
         elif N_probes == 1:
             imgname = config["filenames"][0].replace("../results/test_results_", "")
             imgname = imgname.replace(
@@ -111,6 +112,7 @@ def plot_accuracy_probes(config):
                 f'{"_transformeronly.png" if config["only_transformer"] else ".png"}',
             )
 
+        imgname = imgname.replace("../results", "../plots")
         plt.savefig(imgname, bbox_inches="tight")
 
     plt.show()
