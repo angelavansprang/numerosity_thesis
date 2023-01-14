@@ -54,7 +54,10 @@ def get_desc(img_id, annotation=defaultdict(None), split="train"):
     return annotation[str(img_id)]
 
 
-def get_model_preprocess(device, model_type="ViT-L/14"):
+def get_model_preprocess(device, model_type="ViT-B/32"):
+    """
+    ViT-L/14 seems to break things; because the transformer has 24 layers instead of 12
+    """
     clip.clip._MODELS = {
         "ViT-B/32": "https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt",
         "ViT-B/16": "https://openaipublic.azureedge.net/clip/models/5806e77cd80f8b59890b7e101eabd078d9fb84e6937f9e85e4ecb61988df416f/ViT-B-16.pt",
@@ -86,7 +89,6 @@ def get_repr(img_path, device, model, preprocess):
     """
     reprs = []
     img = preprocess(Image.open(img_path)).unsqueeze(0).to(device)
-    # image_features = model.encode_image(img)
 
     # First step: make patches by a 2d convolution with a kernel_size and stride of 32 (the patch size)
     # here, we get 768 patches of 7x7 pixels
@@ -95,7 +97,6 @@ def get_repr(img_path, device, model, preprocess):
     )  # shape = [*, width, grid, grid]
 
     # Second step: concatenate embeddings
-    # !! Info in embedding?
     z = z.reshape(z.shape[0], z.shape[1], -1)  # shape = [*, width, grid ** 2]
     z = z.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
     z = torch.cat(
@@ -259,11 +260,11 @@ def build_dataloader(
 
     class2label, label2class = get_classlabel(dataset, split=split, objective=objective)
     labels = make_labels_dict(dataset, split=split)
-    # if balanced:
-    #     repr_path = f"../data/{dataset}/representations/{dataset}_{split}_balanced_{objective}_visual.pickle"
-    # else:
-    #     repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
-    repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
+    if balanced:
+        repr_path = f"../data/{dataset}/representations/{dataset}_{split}_balanced_{objective}_visual.pickle"
+    else:
+        repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
+    # repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
 
     print(f"Will try to open representations of {dataset} of split {split}")
     print(f"Balanced is: {balanced}")
@@ -273,23 +274,23 @@ def build_dataloader(
     inputs = []
     targets = []
 
-    if balanced:
-        balanced_labels, _ = make_balanced_data(labels, objective)
+    # if balanced:
+    #     balanced_labels, _ = make_balanced_data(labels, objective)
 
     for img_id, repr in repr.items():
-        if balanced:
-            if int(img_id) in balanced_labels.keys():
-                input = repr[layer].flatten()  # flatten the representations!
-                label = int(labels[int(img_id)][objective])
-                label = label2class[label]
-                inputs.append(input)
-                targets.append(label)
-        else:
-            input = repr[layer].flatten()  # flatten the representations!
-            label = int(labels[int(img_id)][objective])
-            label = label2class[label]
-            inputs.append(input)
-            targets.append(label)
+        # if balanced:
+        #     if int(img_id) in balanced_labels.keys():
+        #         input = repr[layer].flatten()  # flatten the representations!
+        #         label = int(labels[int(img_id)][objective])
+        #         label = label2class[label]
+        #         inputs.append(input)
+        #         targets.append(label)
+        # else:
+        input = repr[layer].flatten()  # flatten the representations!
+        label = int(labels[int(img_id)][objective])
+        label = label2class[label]
+        inputs.append(input)
+        targets.append(label)
 
     dataset_train = list(zip(inputs, targets))
     print("len dataset: ", len(dataset_train))
@@ -300,3 +301,21 @@ def build_dataloader(
         dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=False)
 
     return dataloader, class2label
+
+
+# if __name__ == "__main__":
+#     # device = "cuda" if torch.cuda.is_available() else "cpu"
+#     # model, preprocess = utils.get_model_preprocess(device, model_type="ViT-L/14")
+
+#     labels = make_labels_dict(dataset="sup1", split="test")
+#     print("len labels: ", len(labels))
+#     for key, value in labels.items():
+#         print(key)
+#         print(value)
+#         break
+#     balanced_labels, _ = make_balanced_data(labels, objective="n_colors")
+#     print("len balanced labels: ", len(balanced_labels))
+#     for key, value in balanced_labels.items():
+#         print(key)
+#         print(value)
+#         break

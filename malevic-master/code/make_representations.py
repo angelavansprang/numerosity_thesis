@@ -34,7 +34,6 @@ def make_representations_visual(
         visual_repr_name = (
             f"{dataset}_{split}"
             + f'{"_balanced_" + balance_objective if balance_objective is not None else ""}'
-            # + f'{objective if balanced_subset is not None else ""}'
             + "_visual.pickle"
         )
         img_ids = os.listdir(loc)
@@ -49,7 +48,7 @@ def make_representations_visual(
             img_path = loc + img_name
             img_id = img_name.replace(".png", "")
 
-            if balanced_subset is not None:
+            if balance_objective is not None:
                 if int(img_id) in balanced_subset.keys():
                     image_features = utils.get_repr(img_path, device, model, preprocess)
                     clip_data_vis[img_id] = [
@@ -70,7 +69,7 @@ def make_representations_visual(
 
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, preprocess = utils.get_model_preprocess(device, model_type="ViT-L/14")
+    model, preprocess = utils.get_model_preprocess(device, model_type="ViT-B/32")
 
     make_representations_visual(
         device,
@@ -79,4 +78,13 @@ if __name__ == "__main__":
         dataset="sup1",
         to_store=True,
         balance_objective="n_colors",
+    )
+
+    make_representations_visual(
+        device,
+        model,
+        preprocess,
+        dataset="sup1",
+        to_store=True,
+        balance_objective="n_objects",
     )

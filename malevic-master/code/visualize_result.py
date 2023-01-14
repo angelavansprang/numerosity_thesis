@@ -84,7 +84,21 @@ def plot_accuracy_probes(config):
     ax.legend()
 
     if config["save"]:
-        if N_probes == 3:
+        if N_probes == 4:
+            imgname = config["filenames"][1].replace("../results/test_results_", "")
+            imgname = imgname.replace(
+                ".pickle", f'{"_transformeronly" if config["only_transformer"] else ""}'
+            )
+            imgname = (
+                config["filenames"][0].replace(".pickle", "")
+                + "_"
+                + imgname
+                + "_"
+                + config["labels"][2]
+                + config["labels"][3]
+                + ".png"
+            )
+        elif N_probes == 3:
             imgname = config["filenames"][1].replace("../results/test_results_", "")
             imgname = imgname.replace(
                 ".pickle", f'{"_transformeronly" if config["only_transformer"] else ""}'
@@ -123,13 +137,15 @@ def plot_accuracy_probes(config):
 if __name__ == "__main__":
 
     config = {
-        "no_plots": 2,
+        "no_plots": 4,
         "filenames": [
-            "../results/test_results_MLP_sup1_n_colors_unbalanced_no_layernorm.pickle",
+            "../results/test_results_linear_layer_sup1_n_colors_balanced_no_layernorm.pickle",
             "../results/test_results_MLP_sup1_n_colors_balanced_no_layernorm.pickle",
+            "../results/test_results_MLP2_sup1_n_colors_balanced_no_layernorm.pickle",
+            "../results/test_results_MLP2_sup1_n_colors_balanced_layernorm.pickle",
         ],
-        "labels": ["unbalanced", "balanced"],
-        "info_fig": "(sup1, n_objects, MLP)",
+        "labels": ["linear layer", "MLP", "MLP2", "MLP2 (l_norm)"],
+        "info_fig": "(sup1, n_objects, balanced)",
         "save": True,
         "only_transformer": False,
     }
