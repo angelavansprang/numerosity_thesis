@@ -309,13 +309,5 @@ def build_dataloader(
 
 #     labels = make_labels_dict(dataset="sup1", split="test")
 #     print("len labels: ", len(labels))
-#     for key, value in labels.items():
-#         print(key)
-#         print(value)
-#         break
-#     balanced_labels, _ = make_balanced_data(labels, objective="n_colors")
+#     balanced_labels, _ = make_balanced_data(labels, objective="n_objects")
 #     print("len balanced labels: ", len(balanced_labels))
-#     for key, value in balanced_labels.items():
-#         print(key)
-#         print(value)
-#         break

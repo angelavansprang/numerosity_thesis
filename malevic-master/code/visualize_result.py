@@ -139,13 +139,13 @@ if __name__ == "__main__":
     config = {
         "no_plots": 4,
         "filenames": [
-            "../results/test_results_linear_layer_sup1_n_colors_balanced_no_layernorm.pickle",
-            "../results/test_results_MLP_sup1_n_colors_balanced_no_layernorm.pickle",
-            "../results/test_results_MLP2_sup1_n_colors_balanced_no_layernorm.pickle",
-            "../results/test_results_MLP2_sup1_n_colors_balanced_layernorm.pickle",
+            "../results/test_results_linear_layer_sup1_n_objects_unbalanced_no_layernorm.pickle",
+            "../results/test_results_MLP_sup1_n_objects_unbalanced_no_layernorm.pickle",
+            "../results/test_results_MLP2_sup1_n_objects_unbalanced_no_layernorm.pickle",
+            "../results/test_results_MLP2_sup1_n_objects_unbalanced_layernorm.pickle",
         ],
-        "labels": ["linear layer", "MLP", "MLP2", "MLP2 (l_norm)"],
-        "info_fig": "(sup1, n_objects, balanced)",
+        "labels": ["linear layer", "MLP", "MLP2", "MLP (l_norm)"],
+        "info_fig": "(sup1, n_objects, unbalanced)",
         "save": True,
         "only_transformer": False,
     }
