@@ -8,7 +8,9 @@ import matplotlib.pyplot as plt
 import os
 import pickle
 from torch.utils.data import DataLoader
-import models
+
+# import models
+import transformer_patches
 
 sys.path.append("../../")
 import Transformer_MM_Explainability.CLIP.clip as clip
@@ -141,6 +143,30 @@ def get_repr(img_path, device, model, preprocess):
     return reprs
 
 
+def filter_repr(layer, nodes, reprs):
+    """
+    layer (int): specifies layer in transformer, in range(0, 16)
+    nodes (list): the nodes to filter the representation on. Only these are kept, the rest is not.
+    """
+    if layer == 0 or layer == 1:
+        z = torch.stack(
+            [
+                reprs[layer][0][node + 1]
+                for node in nodes  # +1 to account for class embedding at beginning
+            ]
+        )
+        z = z.unsqueeze(0)
+    else:
+        z = torch.stack(
+            [
+                reprs[layer][node + 1][0]
+                for node in nodes  # +1 to account for class embedding at beginning
+            ]
+        )
+        z = z.unsqueeze(1)
+    return z
+
+
 def make_labels_dict(dataset, split="train"):
     """Make a dictionary with the labels of the images in the split
 
@@ -184,7 +210,6 @@ def make_balanced_data(labels, objective):
 
     """
     count = get_freqs_labels(labels, objective)
-    print(count)
     max = min(count.values())  # min frequency is our max frequency after balancing
 
     balanced_labels = {}
@@ -194,7 +219,7 @@ def make_balanced_data(labels, objective):
         if counter[label] < max:
             balanced_labels[key] = value
             counter[label] += 1
-    print(f"Made balanced data for {objective}; {max} per class")
+    print(f"Made balanced data for {objective}; {max} per class; {dict(count)}")
     return balanced_labels, objective
 
 
@@ -303,11 +328,25 @@ def build_dataloader(
     return dataloader, class2label
 
 
-# if __name__ == "__main__":
-#     # device = "cuda" if torch.cuda.is_available() else "cpu"
-#     # model, preprocess = utils.get_model_preprocess(device, model_type="ViT-L/14")
+if __name__ == "__main__":
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model, preprocess = get_model_preprocess(device, model_type="ViT-B/32")
 
-#     labels = make_labels_dict(dataset="sup1", split="test")
-#     print("len labels: ", len(labels))
-#     balanced_labels, _ = make_balanced_data(labels, objective="n_objects")
-#     print("len balanced labels: ", len(balanced_labels))
+    # labels = make_labels_dict(dataset="sup1", split="test")
+    # print("len labels: ", len(labels))
+    # balanced_labels, _ = make_balanced_data(labels, objective="n_objects")
+    # print("len balanced labels: ", len(balanced_labels))
+
+    img_filename = "0.png"
+    dataset = "sup1"
+    split = "test"
+    img_path = f"../data/{dataset}/images/{split}/{img_filename}"
+    reprs = get_repr(img_path, device, model, preprocess)
+    print(len(reprs), reprs[0].size())
+    nodes = transformer_patches.get_all_patches_with_objects(
+        img_filename, dataset, split
+    )
+    print("nodes: ", nodes)
+    print("amount of nodes: ", len(nodes))
+    filt_repr = filter_repr(8, nodes, reprs)
+    print(filt_repr.size())

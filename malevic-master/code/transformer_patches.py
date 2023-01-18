@@ -2,6 +2,9 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as plticker
 from PIL import Image
 import bounding_boxes
+import utils
+import pickle
+from collections import defaultdict
 
 
 def open_image_withpatches(imgname, dataset, split, to_save=False):
@@ -94,6 +97,84 @@ def check_box_in_patch(patch, box):
         return True
 
 
+def analyze_amount_objectpatches(dataset, split, balance_objective=None, to_save=False):
+    import os
+
+    results = {}
+    img_ids = os.listdir(f"../data/{dataset}/images/{split}/")
+
+    if balance_objective == None:
+        for img_name in img_ids:
+            patches = get_all_patches_with_objects(img_name, dataset, split)
+            results[img_name] = len(patches)
+    else:
+        labels = utils.make_labels_dict(dataset, split)
+        balanced_subset, _ = utils.make_balanced_data(labels, balance_objective)
+        for img_name in img_ids:
+            img_id = int(img_name.replace(".png", ""))
+            if img_id in balanced_subset.keys():
+                patches = get_all_patches_with_objects(img_name, dataset, split)
+                results[img_name] = len(patches)
+    if to_save:
+        file_name = (
+            f"../examples/{dataset}/objectpatches_{split}"
+            + f'{"_balanced_" + balance_objective if balance_objective is not None else ""}'
+            + ".pickle"
+        )
+        with open(file_name, "wb") as f:
+            pickle.dump(results, f)
+
+
+def visualize_N_objectpatches(dataset, split, balance_objective=None, to_save=False):
+    file_name = (
+        f"../examples/{dataset}/objectpatches_{split}"
+        + f'{"_balanced_" + balance_objective if balance_objective is not None else ""}'
+        + ".pickle"
+    )
+    with open(file_name, "rb") as f:
+        objectpatches = pickle.load(f)
+
+    results = defaultdict(lambda: 0)
+    for N_patches in objectpatches.values():
+        results[N_patches] += 1
+
+    plt.bar(list(results.keys()), list(results.values()))
+    plt.title(
+        f"Frequencies number of object patches ({dataset}, {split}"
+        + f'{", " + balance_objective if balance_objective is not None else ""}'
+        + ")"
+    )
+    plt.xlabel("Number of object patches")
+    plt.ylabel("Frequency")
+
+    if to_save:
+        file_name = (
+            f"../examples/{dataset}/frequencies_{dataset}_{split}"
+            + f'{"balance_objective" if balance_objective is not None else ""}'
+            + ".png"
+        )
+        plt.savefig(
+            file_name,
+            bbox_inches="tight",
+            pad_inches=0,
+        )
+
+
 if __name__ == "__main__":
     # open_image_withpatches("0.png", "sup1", "test", to_save=True)
-    print(get_all_patches_with_objects("0.png", "sup1", "test"))
+    # print(get_all_patches_with_objects("0.png", "sup1", "test"))
+
+    analyze_amount_objectpatches("sup1", "train", balance_objective=None, to_save=True)
+    visualize_N_objectpatches("sup1", "train", balance_objective=None, to_save=True)
+    analyze_amount_objectpatches(
+        "sup1", "train", balance_objective="n_colors", to_save=True
+    )
+    visualize_N_objectpatches(
+        "sup1", "train", balance_objective="n_colors", to_save=True
+    )
+    analyze_amount_objectpatches(
+        "sup1", "train", balance_objective="n_objects", to_save=True
+    )
+    visualize_N_objectpatches(
+        "sup1", "train", balance_objective="n_objects", to_save=True
+    )

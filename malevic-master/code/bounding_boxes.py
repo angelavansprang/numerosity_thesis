@@ -3,8 +3,7 @@ import json
 from PIL import Image
 from math import ceil
 import utils
-from d2l import mxnet as d2l
-from mxnet import image, npx
+import matplotlib.pyplot as plt
 
 
 def convert_coordinate(p, resolution=1500):
@@ -23,8 +22,16 @@ def get_rotation(obj, img, resolution):
             return "vert"
         if rr > resolution:
             return "horiz"
-        if img[cc + 2, rr] == img[cc - 2, rr]:
-            return "horiz"
+        try:
+            if img[cc + 2, rr] == img[cc - 2, rr]:
+                return "horiz"
+        except IndexError:
+            print("resolution: ", resolution)
+            print("rr: ", rr)
+            print("cc: ", cc)
+            print("img.shape(): ", img.shape())
+        # if img[cc + 2, rr] == img[cc - 2, rr]:
+        #     return "horiz"
         else:
             return "vert"
     if obj["shape"] == "rectangle":
@@ -86,7 +93,7 @@ def bbox_to_rect(bbox, color):
     # Convert the bounding box (top-left x, top-left y, bottom-right x,
     # bottom-right y) format to matplotlib format: ((upper-left x,
     # upper-left y), width, height)
-    return d2l.plt.Rectangle(
+    return plt.Rectangle(
         xy=(bbox[0], bbox[1]),
         width=bbox[2] - bbox[0],
         height=bbox[3] - bbox[1],
@@ -121,22 +128,26 @@ def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
     img_path = f"../data/{dataset}/images/{split}/{img_filename}"
     boxes = get_boxes(img_filename, dataset, split)
 
-    d2l.set_figsize((10, 10))
-    img = image.imread(img_path).asnumpy()
-    fig = d2l.plt.imshow(img)
+    fig, ax = plt.subplots()
+    fig.set_figheight = 10
+    fig.set_figwidth = 10
+    img = np.array(Image.open(img_path))
+    plt.imshow(img)
 
     for bbox in boxes:
         print(bbox)
-        fig.axes.add_patch(bbox_to_rect(bbox, "cyan"))
+        ax.add_patch(bbox_to_rect(bbox, "cyan"))
 
     if to_save:
-        d2l.plt.axis("off")
-        d2l.plt.savefig(
+        plt.axis("off")
+        plt.savefig(
             f"../examples/{dataset}/bb_{img_filename}",
             bbox_inches="tight",
             pad_inches=0,
         )
+    else:
+        plt.show()
 
 
 if __name__ == "__main__":
-    make_img_boxes(img_filename="287.png", dataset="sup1", split="test", to_save=True)
+    make_img_boxes(img_filename="200.png", dataset="sup1", split="test", to_save=False)
