@@ -8,6 +8,7 @@
 !/malevic-master/code/models.py
 !/malevic-master/code/make_representations.py
 !/malevic-master/code/bounding_boxes.py
+!/malevic-master/code/transformer_patches.py
 !/malevic-master/results
 !/malevic-master/plots
 

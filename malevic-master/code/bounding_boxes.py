@@ -3,30 +3,32 @@ import json
 from PIL import Image
 from math import ceil
 import utils
+from d2l import mxnet as d2l
+from mxnet import image, npx
 
 
-def convert_coordinate(p, resolution=350):
+def convert_coordinate(p, resolution=1500):
     return ceil(ceil(float(p)) / 1024 * resolution)
 
 
 # obj is annotation of an object, img -- Pillow RGB image
 
 
-def get_rotation(obj, img):
-    rr = convert_coordinate(obj["rr"])
-    cc = convert_coordinate(obj["cc"])
-    r = convert_coordinate(obj["radius"])
+def get_rotation(obj, img, resolution):
+    rr = convert_coordinate(obj["rr"], resolution)
+    cc = convert_coordinate(obj["cc"], resolution)
+    r = convert_coordinate(obj["radius"], resolution)
     if obj["shape"] == "triangle":
-        if cc + 2 > 349:
+        if cc + 2 > resolution:
             return "vert"
-        if rr > 349:
+        if rr > resolution:
             return "horiz"
         if img[cc + 2, rr] == img[cc - 2, rr]:
             return "horiz"
         else:
             return "vert"
     if obj["shape"] == "rectangle":
-        if cc + ceil(r / 2) + 2 > 349:
+        if cc + ceil(r / 2) + 2 > resolution:
             return "vert"
         elif img[cc, rr] == img[cc + ceil(r / 2) + 2, rr]:
             return "horiz"
@@ -36,11 +38,11 @@ def get_rotation(obj, img):
         return "N/A"
 
 
-def get_box(obj):
+def get_box(obj, resolution):
 
-    rr = convert_coordinate(obj["rr"])
-    cc = convert_coordinate(obj["cc"])
-    r = convert_coordinate(obj["radius"])
+    rr = convert_coordinate(obj["rr"], resolution)
+    cc = convert_coordinate(obj["cc"], resolution)
+    r = convert_coordinate(obj["radius"], resolution)
     box = []
 
     if obj["shape"] == "circle" or obj["shape"] == "square":
@@ -79,5 +81,62 @@ def get_box(obj):
             return box
 
 
+def bbox_to_rect(bbox, color):
+    """Convert bounding box to matplotlib format."""
+    # Convert the bounding box (top-left x, top-left y, bottom-right x,
+    # bottom-right y) format to matplotlib format: ((upper-left x,
+    # upper-left y), width, height)
+    return d2l.plt.Rectangle(
+        xy=(bbox[0], bbox[1]),
+        width=bbox[2] - bbox[0],
+        height=bbox[3] - bbox[1],
+        fill=False,
+        edgecolor=color,
+        linewidth=2,
+    )
+
+
+def get_boxes(img_filename, dataset="sup1", split="train"):
+    img_path = f"../data/{dataset}/images/{split}/{img_filename}"
+    annotation = utils.get_annotation(dataset=dataset, split=split)
+    img = Image.open(img_path)
+    img_size = img.size
+    assert img_size[0] == img_size[1], "width should equal height"
+    img = img.load()
+
+    objects = annotation[img_filename.split(".")[0]][1]["objects"]
+    for obj in objects:
+        obj["rotation"] = get_rotation(obj, img, resolution=img_size[0])
+    for obj in objects:
+        obj["box"] = get_box(obj, resolution=img_size[0])
+
+    boxes = []
+    for obj in objects:
+        boxes.append(obj["box"])
+
+    return boxes
+
+
+def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
+    img_path = f"../data/{dataset}/images/{split}/{img_filename}"
+    boxes = get_boxes(img_filename, dataset, split)
+
+    d2l.set_figsize((10, 10))
+    img = image.imread(img_path).asnumpy()
+    fig = d2l.plt.imshow(img)
+
+    for bbox in boxes:
+        print(bbox)
+        fig.axes.add_patch(bbox_to_rect(bbox, "cyan"))
+
+    if to_save:
+        d2l.plt.axis("off")
+        d2l.plt.savefig(
+            f"../examples/{dataset}/bb_{img_filename}",
+            bbox_inches="tight",
+            pad_inches=0,
+        )
+
+
 if __name__ == "__main__":
-    annotation = utils.get_annotation(dataset="sup1", split="test")
+    make_img_boxes(img_filename="287.png", dataset="sup1", split="test", to_save=True)
