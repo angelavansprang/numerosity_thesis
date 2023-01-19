@@ -9,7 +9,7 @@ import os
 import pickle
 from torch.utils.data import DataLoader
 
-# import models
+# import modelsh
 import transformer_patches
 
 sys.path.append("../../")
