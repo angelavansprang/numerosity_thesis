@@ -51,8 +51,8 @@ def open_image_withpatches(imgname, dataset, split, to_save=False):
                 x, y, "{:d}".format(i + j * nx), color="w", ha="center", va="center"
             )
 
-    # ax.set_xticklabels([])
-    # ax.set_yticklabels([])
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
 
     if to_save:
         plt.savefig(
@@ -150,7 +150,7 @@ def visualize_N_objectpatches(dataset, split, balance_objective=None, to_save=Fa
     if to_save:
         file_name = (
             f"../examples/{dataset}/frequencies_{dataset}_{split}"
-            + f'{"balance_objective" if balance_objective is not None else ""}'
+            + f'{"_balanced_" + balance_objective if balance_objective is not None else ""}'
             + ".png"
         )
         plt.savefig(
@@ -161,20 +161,20 @@ def visualize_N_objectpatches(dataset, split, balance_objective=None, to_save=Fa
 
 
 if __name__ == "__main__":
-    # open_image_withpatches("0.png", "sup1", "test", to_save=True)
-    # print(get_all_patches_with_objects("0.png", "sup1", "test"))
+    # open_image_withpatches("bb_10295.png", "sup1", "train", to_save=True)
+    # print(get_all_patches_with_objects("10295.png", "sup1", "train"))
 
     analyze_amount_objectpatches("sup1", "train", balance_objective=None, to_save=True)
     visualize_N_objectpatches("sup1", "train", balance_objective=None, to_save=True)
-    analyze_amount_objectpatches(
-        "sup1", "train", balance_objective="n_colors", to_save=True
-    )
-    visualize_N_objectpatches(
-        "sup1", "train", balance_objective="n_colors", to_save=True
-    )
-    analyze_amount_objectpatches(
-        "sup1", "train", balance_objective="n_objects", to_save=True
-    )
-    visualize_N_objectpatches(
-        "sup1", "train", balance_objective="n_objects", to_save=True
-    )
+    # analyze_amount_objectpatches(
+    #     "sup1", "train", balance_objective="n_colors", to_save=True
+    # )
+    # visualize_N_objectpatches(
+    #     "sup1", "train", balance_objective="n_colors", to_save=True
+    # )
+    # analyze_amount_objectpatches(
+    #     "sup1", "train", balance_objective="n_objects", to_save=True
+    # )
+    # visualize_N_objectpatches(
+    #     "sup1", "train", balance_objective="n_objects", to_save=True
+    # )

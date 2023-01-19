@@ -18,24 +18,16 @@ def get_rotation(obj, img, resolution):
     cc = convert_coordinate(obj["cc"], resolution)
     r = convert_coordinate(obj["radius"], resolution)
     if obj["shape"] == "triangle":
-        if cc + 2 > resolution:
+        if cc + 2 >= resolution:
             return "vert"
         if rr > resolution:
             return "horiz"
-        try:
-            if img[cc + 2, rr] == img[cc - 2, rr]:
-                return "horiz"
-        except IndexError:
-            print("resolution: ", resolution)
-            print("rr: ", rr)
-            print("cc: ", cc)
-            print("img.shape(): ", img.shape())
-        # if img[cc + 2, rr] == img[cc - 2, rr]:
-        #     return "horiz"
+        if img[cc + 2, rr] == img[cc - 2, rr]:
+            return "horiz"
         else:
             return "vert"
     if obj["shape"] == "rectangle":
-        if cc + ceil(r / 2) + 2 > resolution:
+        if cc + ceil(r / 2) + 2 >= resolution:
             return "vert"
         elif img[cc, rr] == img[cc + ceil(r / 2) + 2, rr]:
             return "horiz"
@@ -128,9 +120,8 @@ def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
     img_path = f"../data/{dataset}/images/{split}/{img_filename}"
     boxes = get_boxes(img_filename, dataset, split)
 
+    plt.rcParams["figure.figsize"] = (10, 10)
     fig, ax = plt.subplots()
-    fig.set_figheight = 10
-    fig.set_figwidth = 10
     img = np.array(Image.open(img_path))
     plt.imshow(img)
 
@@ -150,4 +141,6 @@ def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
 
 
 if __name__ == "__main__":
-    make_img_boxes(img_filename="200.png", dataset="sup1", split="test", to_save=False)
+    make_img_boxes(
+        img_filename="10295.png", dataset="sup1", split="train", to_save=True
+    )
