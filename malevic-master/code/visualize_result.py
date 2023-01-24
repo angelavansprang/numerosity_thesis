@@ -35,6 +35,7 @@ def plot_accuracy_probes(config):
     config (dict): contains the keys, "filenames", "labels", "info_fig", "save", "only_transformer"
     """
     results = []
+    xs = []
     ys = []
     yerrors = []
     N_probes = len(config["filenames"])
@@ -46,24 +47,26 @@ def plot_accuracy_probes(config):
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
 
-    x = [key for key in results[0].keys()]
-
     for result in results:
-        y = [np.mean(result[key]) for key in x]
-        yerr = [np.std(result[key]) for key in x]
+        x = [key for key in result.keys()]
+        # y = [np.mean(result[key]) for key in x if key < len(result) else 0]
+        y = [np.mean(result[key]) for key in result.keys()]
+        yerr = [np.std(result[key]) for key in result.keys()]
+        xs.append(x)
         ys.append(y)
         yerrors.append(yerr)
 
     if not config["only_transformer"]:
         for i in range(N_probes):
             ax.errorbar(
-                x,
+                xs[i],
                 ys[i],
                 yerrors[i],
                 linestyle="--",
                 marker="o",
                 label=config["labels"][i],
             )
+        x = [key for key in results[0].keys()]
         plt.xticks(x, labels=layer2name.values(), rotation=45)
         plt.suptitle(f"Accuracy probes from representations {info_fig}")
     else:
@@ -127,6 +130,8 @@ def plot_accuracy_probes(config):
             )
 
         imgname = imgname.replace("../results", "../plots")
+        plt.ylabel("Accuracy")
+        plt.xlabel("Layer")
         plt.savefig(imgname, bbox_inches="tight")
 
     plt.show()
@@ -137,15 +142,14 @@ def plot_accuracy_probes(config):
 if __name__ == "__main__":
 
     config = {
-        "no_plots": 4,
+        "no_plots": 3,
         "filenames": [
-            "../results/test_results_linear_layer_sup1_n_objects_unbalanced_no_layernorm.pickle",
-            "../results/test_results_MLP_sup1_n_objects_unbalanced_no_layernorm.pickle",
-            "../results/test_results_MLP2_sup1_n_objects_unbalanced_no_layernorm.pickle",
-            "../results/test_results_MLP2_sup1_n_objects_unbalanced_layernorm.pickle",
+            "../results/test_results_MLP2_sup1_n_colors_balanced_no_layernorm.pickle",
+            "../results/test_results_MLP2_sup1_n_colors_balanced_filtered_{30}_no_layernorm.pickle",
+            "../results/test_results_MLP2_sup1_n_colors_balanced_filtered_{30}_single_patch_no_layernorm.pickle",
         ],
-        "labels": ["linear layer", "MLP", "MLP2", "MLP (l_norm)"],
-        "info_fig": "(sup1, n_objects, unbalanced)",
+        "labels": ["Original", "30 object patches", "Single patch"],
+        "info_fig": "(sup1, n_colors, balanced, MLP2)",
         "save": True,
         "only_transformer": False,
     }

@@ -10,7 +10,14 @@ import argparse
 
 
 def experiment_per_layer(
-    objective, dataset, modelname, balanced=True, layernorm=False, save_models=False
+    objective,
+    dataset,
+    modelname,
+    balanced=True,
+    layernorm=False,
+    save_models=False,
+    padding_up_to=None,
+    single_patch=False,
 ):
     """#TODO: think about and change the option to save the trained models. This can be helpful
     for testing, but then you should also store the trainers? maybe just save them as pickle files?
@@ -23,18 +30,36 @@ def experiment_per_layer(
 
     results = defaultdict(lambda: [])
 
-    for layer, size in utils.layer2size.items():
+    for layer, size in utils.layer2size(padding_up_to, single_patch).items():
         print(f"Started with layer {layer} of size {size}")
         D_in = size
 
         loader_train, class2label = utils.build_dataloader(
-            dataset, layer, split="train", balanced=balanced, objective=objective
+            dataset,
+            layer,
+            split="train",
+            balanced=balanced,
+            objective=objective,
+            padding_up_to=padding_up_to,
+            single_patch=single_patch,
         )
         loader_val, class2label = utils.build_dataloader(
-            dataset, layer, split="val", balanced=balanced, objective=objective
+            dataset,
+            layer,
+            split="val",
+            balanced=balanced,
+            objective=objective,
+            padding_up_to=padding_up_to,
+            single_patch=single_patch,
         )
         loader_test, class2label = utils.build_dataloader(
-            dataset, layer, split="test", balanced=balanced, objective=objective
+            dataset,
+            layer,
+            split="test",
+            balanced=balanced,
+            objective=objective,
+            padding_up_to=padding_up_to,
+            single_patch=single_patch,
         )
 
         for i in range(5):
@@ -50,7 +75,7 @@ def experiment_per_layer(
 
             results[layer].append(performance[0]["acc"])
             if save_models:
-                save_models_path = f'../models/{modelname}_layer{layer}_{i}_{dataset}_{objective}_{"balanced" if balanced else "unbalanced"}_{"layernorm" if layernorm else "no_layernorm"}.pt'
+                save_models_path = f'../models/{modelname}_layer{layer}_{i}_{dataset}_{objective}_{"balanced" if balanced else "unbalanced"}_{"filtered" if filter else "unfiltered"}{"_single_patch" if single_patch else ""}_{"layernorm" if layernorm else "no_layernorm"}.pt'
                 torch.save(model.state_dict(), save_models_path)
 
     return results
@@ -65,6 +90,8 @@ if __name__ == "__main__":
     parser.add_argument("--modelname", choices=["linear_layer", "MLP", "MLP2"])
     parser.add_argument("--layernorm", action="store_true")
     parser.add_argument("--save_models", action="store_true")
+    parser.add_argument("--padding_up_to", type=int, default=None)
+    parser.add_argument("--single_patch", action="store_true")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -76,6 +103,8 @@ if __name__ == "__main__":
         balanced=args.balanced,
         layernorm=args.layernorm,
         save_models=args.save_models,
+        padding_up_to=args.padding_up_to,
+        single_patch=args.single_patch,
     )
 
     results_path = "../results/"
@@ -83,7 +112,7 @@ if __name__ == "__main__":
     results_tosave = dict(results)
     with open(
         results_path
-        + f'test_results_{args.modelname}_{args.dataset}_{args.objective}_{"balanced" if args.balanced else "unbalanced"}_{"layernorm" if args.layernorm else "no_layernorm"}.pickle',
+        + f'test_results_{args.modelname}_{args.dataset}_{args.objective}_{"balanced" if args.balanced else "unbalanced"}_{"filtered_" + str({args.padding_up_to}) if args.padding_up_to is not None else "unfiltered"}{"_single_patch" if args.single_patch else ""}_{"layernorm" if args.layernorm else "no_layernorm"}.pickle',
         "wb",
     ) as f:
         pickle.dump(results_tosave, f)

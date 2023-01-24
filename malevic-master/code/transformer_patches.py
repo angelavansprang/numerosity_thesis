@@ -126,6 +126,7 @@ def analyze_amount_objectpatches(dataset, split, balance_objective=None, to_save
 
 
 def visualize_N_objectpatches(dataset, split, balance_objective=None, to_save=False):
+    objectpatches = open_N_objectpatches(dataset, split, balance_objective)
     file_name = (
         f"../examples/{dataset}/objectpatches_{split}"
         + f'{"_balanced_" + balance_objective if balance_objective is not None else ""}'
@@ -158,6 +159,17 @@ def visualize_N_objectpatches(dataset, split, balance_objective=None, to_save=Fa
             bbox_inches="tight",
             pad_inches=0,
         )
+
+
+def open_N_objectpatches(dataset, split, balance_objective):
+    file_name = (
+        f"../examples/{dataset}/objectpatches_{split}"
+        + f'{"_balanced_" + balance_objective if balance_objective is not None else ""}'
+        + ".pickle"
+    )
+    with open(file_name, "rb") as f:
+        objectpatches = pickle.load(f)
+    return objectpatches
 
 
 if __name__ == "__main__":
