@@ -9,6 +9,25 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import argparse
 
 
+layer2size = {
+    0: 2 * 768,
+    1: 2 * 768,
+    2: 2 * 768,
+    3: 2 * 768,
+    4: 2 * 768,
+    5: 2 * 768,
+    6: 2 * 768,
+    7: 2 * 768,
+    8: 2 * 768,
+    9: 2 * 768,
+    10: 2 * 768,
+    11: 2 * 768,
+    12: 2 * 768,
+    13: 2 * 768,
+    14: 2 * 768,
+}
+
+
 def experiment_per_layer(
     objective,
     dataset,
@@ -23,76 +42,36 @@ def experiment_per_layer(
     for testing, but then you should also store the trainers? maybe just save them as pickle files?
     Then, need to include the path as argument?
     """
-    if objective == "n_colors":
-        D_out = 4
-    elif objective == "n_objects":
-        D_out = 5
-    elif objective == "shape":
-        D_out = 5
-        single_patch = True
-    elif objective == "color":
-        D_out = 5
-        single_patch = True
+    if objective == "binding_problem":
+        D_out = 2
+    else:
+        raise ValueError
 
+    single_patch = True
     results = defaultdict(lambda: [])
 
-    for layer, size in utils.layer2size(padding_up_to, single_patch).items():
+    for layer, size in layer2size.items():
         print(f"Started with layer {layer} of size {size}")
-        D_in = size
+        D_in = size  # TODO: CHANGE
 
-        if objective == "n_colors" or objective == "n_objects":
-            loader_train, class2label = utils.build_dataloader(
-                dataset,
-                layer,
-                split="train",
-                balanced=balanced,
-                objective=objective,
-                padding_up_to=padding_up_to,
-                single_patch=single_patch,
-            )
-            loader_val, class2label = utils.build_dataloader(
-                dataset,
-                layer,
-                split="val",
-                balanced=balanced,
-                objective=objective,
-                padding_up_to=padding_up_to,
-                single_patch=single_patch,
-            )
-            loader_test, class2label = utils.build_dataloader(
-                dataset,
-                layer,
-                split="test",
-                balanced=balanced,
-                objective=objective,
-                padding_up_to=padding_up_to,
-                single_patch=single_patch,
-            )
-        elif objective == "shape" or objective == "color":
-            loader_train, class2label = utils.build_dataloader_patchbased(
-                dataset,
-                layer,
-                objective,
-                split="train",
-                balanced=balanced,
-                threshold=padding_up_to,
-            )
-            loader_val, class2label = utils.build_dataloader_patchbased(
-                dataset,
-                layer,
-                objective,
-                split="val",
-                balanced=balanced,
-                threshold=padding_up_to,
-            )
-            loader_test, class2label = utils.build_dataloader_patchbased(
-                dataset,
-                layer,
-                objective,
-                split="test",
-                balanced=balanced,
-                threshold=padding_up_to,
-            )
+        loader_train = utils.build_dataloader_twopatches(
+            dataset,
+            layer,
+            split="train",
+            threshold=padding_up_to,
+        )
+        loader_val = utils.build_dataloader_twopatches(
+            dataset,
+            layer,
+            split="val",
+            threshold=padding_up_to,
+        )
+        loader_test = utils.build_dataloader_twopatches(
+            dataset,
+            layer,
+            split="test",
+            threshold=padding_up_to,
+        )
 
         for i in range(5):
             model = utils.open_model(D_in, D_out, layernorm, modelname)
@@ -119,7 +98,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", choices=["sup1", "pos"], required=True)
     parser.add_argument(
         "--objective",
-        choices=["n_colors", "n_objects", "shape", "color"],
+        choices=["binding_problem"],
         required=True,
     )
     parser.add_argument("--balanced", action="store_true")

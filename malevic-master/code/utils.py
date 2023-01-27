@@ -1,6 +1,8 @@
 import json
 import torch
 import sys
+import copy
+import random
 from PIL import Image
 from tqdm import tqdm
 from collections import defaultdict
@@ -8,6 +10,7 @@ import matplotlib.pyplot as plt
 import os
 import pickle
 from torch.utils.data import DataLoader
+
 import models
 import transformer_patches
 
@@ -262,6 +265,7 @@ def make_labels_dict(dataset, split="train"):
         labels[img_id] = {
             "n_colors": desc[0]["n_colors"],
             "n_objects": desc[0]["n_objects"],
+            "objects": desc[1]["objects"],
         }
     return labels
 
@@ -325,6 +329,33 @@ def get_classlabel(dataset, split="train", objective="n_colors"):
         i += 1
 
     return class2label, label2class
+
+
+def get_class_colorshape(objective):
+    """
+    objective (string): "color" or "shape"
+    """
+    color2class = {
+        "white": 0,
+        "blue": 1,
+        "red": 2,
+        "yellow": 3,
+        "green": 4,
+    }
+    class2color = {
+        0: "white",
+        1: "blue",
+        2: "red",
+        3: "yellow",
+        4: "green",
+    }
+    shape2class = {"square": 0, "rectangle": 1, "circle": 2, "triangle": 3}
+    class2shape = {0: "square", 1: "rectangle", 2: "circle", 3: "triangle"}
+
+    if objective == "color":
+        return class2color, color2class
+    elif objective == "shape":
+        return class2shape, shape2class
 
 
 def get_freq_plot(objective="n_colors", split="train", save=True):
@@ -395,9 +426,10 @@ def build_dataloader(
 
     for img_id, repr in repr.items():
         if filter:
-            nodes = transformer_patches.get_all_patches_with_objects(
+            patches = transformer_patches.get_all_patches_with_objects(
                 f"{img_id}.png", dataset, split
             )  # TODO: MAYBE JUST STORE THESE?
+            nodes = patches.keys()
 
             if len(nodes) <= padding_up_to:
                 input = filter_repr(
@@ -435,6 +467,272 @@ def build_dataloader(
         dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=False)
 
     return dataloader, class2label
+
+
+def build_dataloader_patchbased(
+    dataset,
+    layer,
+    objective,
+    split="train",
+    balanced=True,
+    batch_size=10,
+    threshold=30,
+):
+    """Return dataloaders with the (visual) CLIP representations of one patch as data and the objective as label.
+
+    Input:
+    ids_val (list): contains ints of the IDs of the images that should be in the validation set.
+    balanced (bool): whether the dataloaders should be made balanced (i.e. same number of instances per class)
+    objective (string): either 'color' or 'shape'
+    threshold (int): do not include images with more object patches than the threshold
+    """
+    class2label, label2class = get_class_colorshape(objective)
+
+    if balanced:
+        repr_path = f"../data/{dataset}/representations/{dataset}_{split}_balanced_n_colors_visual.pickle"
+    else:
+        repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
+    # repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
+
+    print(f"Will try to open representations of {dataset} of split {split}")
+    print(f"Balanced is: {balanced}")
+    with open(repr_path, "rb") as f:
+        repr = pickle.load(f)
+
+    inputs = []
+    targets = []
+
+    # if balanced:
+    #     balanced_labels, _ = make_balanced_data(labels, objective)
+
+    for img_id, repr in repr.items():
+        patches = transformer_patches.get_all_patches_with_objects(
+            f"{img_id}.png", dataset, split
+        )  # TODO: MAYBE JUST STORE THESE?
+        nodes = patches.keys()
+
+        if len(nodes) <= threshold:
+            input = filter_repr(
+                layer,
+                nodes,
+                repr,
+                single_patch=True,
+                padding_up_to=threshold,
+            )
+            for i, patch_id in enumerate(nodes):
+                patch = input[i]
+                boxes = patches[
+                    patch_id
+                ]  # one patch could contain multiple object boxes, but skip these because label uncertain
+                if len(boxes) > 1:
+                    break
+                box = boxes[0]
+                # print(box)
+                # print(box[objective])
+                label = label2class[box[objective]]
+                inputs.append(patch)
+                targets.append(label)
+
+    dataset_train = list(zip(inputs, targets))
+    print("len dataset: ", len(dataset_train))
+
+    if split == "train":
+        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
+    else:
+        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=False)
+
+    return dataloader, class2label
+
+
+def get_neighboring_patches(patch_id):
+    if patch_id == 0:
+        neigbors = [1, 7, 8]
+    elif patch_id == 6:
+        neigbors = [5, 12, 13]
+    elif patch_id == 42:
+        neigbors = [35, 36, 43]
+    elif patch_id == 48:
+        neigbors = [40, 41, 47]
+    elif patch_id < 7:
+        # patch is in upper row
+        neigbors = [
+            patch_id + i
+            for i in [-1, 1, 6, 7, 8]
+            if patch_id + i >= 0 and patch_id < 49
+        ]
+    elif patch_id > 41:
+        # patch is in lower row
+        neigbors = [
+            patch_id + i
+            for i in [-8, -7, -6, -1, 1]
+            if patch_id + i >= 0 and patch_id < 49
+        ]
+    elif patch_id % 7 == 0:
+        # patch is in left column
+        neigbors = [
+            patch_id + i
+            for i in [-7, -6, 1, 7, 8]
+            if patch_id + i >= 0 and patch_id < 49
+        ]
+    elif patch_id % 7 == 6:
+        # patch is in left column
+        neigbors = [
+            patch_id + i
+            for i in [-8, -7, -1, 6, 7]
+            if patch_id + i >= 0 and patch_id < 49
+        ]
+    else:
+        neigbors = [
+            patch_id + i
+            for i in [-8, -7, -6, -1, 1, 6, 7, 8]
+            if patch_id + i >= 0 and patch_id < 49
+        ]
+    return neigbors
+
+
+def find_hard_positives_twopatches(patches):
+    """input:
+    patches (dict): keys = patch numbers ([0, 49]), values = boxes on patch
+
+    returns:
+    (int) patch_id, (int) patch_id, (0, 1) binary label indicating same object
+    """
+    boxes_dict = defaultdict(lambda: [])
+    for patch_id, boxes in patches.items():
+        for box in boxes:
+            boxes_dict[box["object_id"]].append(patch_id)
+
+    b_keys = list(boxes_dict.keys())
+    random.shuffle(b_keys)
+    for box in b_keys:
+        patch_ids = boxes_dict[box]
+        for patch_id in patch_ids:
+            patches_left = copy.deepcopy(patch_ids)
+            for neighbor in get_neighboring_patches(patch_id):
+                if neighbor in patches_left:
+                    patches_left.remove(neighbor)
+            if len(patches_left) > 0:
+                return patch_id, patches_left[0], 1
+
+    # if nothing is returned by now, there are no patches of the same object that are not neighbors.
+    # then, just return -1, -1
+    return -1, -1, 0
+
+
+def get_hard_negatives_twopatches(patches):
+    keys = list(patches.keys())
+    random.shuffle(keys)
+    for patch_id in keys:
+        boxes = patches[patch_id]
+        for box in boxes:
+            box_color = box["color"]
+            box_shape = box["shape"]
+            box_id = box["object_id"]
+            for (
+                patch_id2,
+                boxes2,
+            ) in (
+                patches.items()
+            ):  # Second loop to find another patch with same color and shape
+                for box2 in boxes2:
+                    if box2["color"] == box_color and box2["shape"] == box_shape:
+                        if box2["object_id"] != box_id:
+                            return patch_id, patch_id2, 0
+    return -1, -1, 1
+
+
+def get_randoms_twopatches(patches):
+    keys = list(patches.keys())
+    patch_id1, patch_id2 = random.sample(keys, 2)
+    boxes1 = patches[patch_id1]
+    boxes2 = patches[patch_id2]
+    for box1 in boxes1:
+        for box2 in boxes2:
+            if box1["object_id"] == box2["object_id"]:
+                return patch_id1, patch_id2, 1
+    return patch_id1, patch_id2, 0
+
+
+def build_dataloader_twopatches(
+    dataset,
+    layer,
+    split="train",
+    batch_size=10,
+    threshold=30,
+):
+    """Return dataloaders with the (visual) CLIP representations of one patch as data and the objective as label.
+
+    Input:
+    ids_val (list): contains ints of the IDs of the images that should be in the validation set.
+    balanced (bool): whether the dataloaders should be made balanced (i.e. same number of instances per class)
+    objective (string): either 'color' or 'shape'
+    threshold (int): do not include images with more object patches than the threshold
+    """
+
+    def stack_reprs_2patches(patch1, patch2, label, repr):
+        if patch1 == -1 and patch2 == -1:
+            patch1, patch2, label = get_randoms_twopatches(patches)
+        input1 = filter_repr(
+            layer, [patch1], repr, single_patch=True, padding_up_to=threshold
+        )
+        input2 = filter_repr(
+            layer, [patch2], repr, single_patch=True, padding_up_to=threshold
+        )
+        print(input1[0].shape)
+        print(input2[0].shape)
+        z = torch.stack(
+            [torch.from_numpy(input1[0]), torch.from_numpy(input2[0])]
+        )  # TODO: Check if this works
+        z = z.flatten()
+        print(z.shape)
+        return z, label
+
+    # class2label, label2class = get_class_colorshape(objective)
+
+    repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
+
+    print(f"Will try to open representations of {dataset} of split {split}")
+    with open(repr_path, "rb") as f:
+        repr = pickle.load(f)
+
+    inputs = []
+    targets = []
+
+    for img_id, repr in repr.items():
+        patches = transformer_patches.get_all_patches_with_objects(
+            f"{img_id}.png", dataset, split
+        )  # TODO: MAYBE JUST STORE THESE?
+        nodes = patches.keys()
+
+        if len(nodes) <= threshold:
+            # TODO: 1. find 3 repr patch duo's: hard positives, hard negatives, random
+            # TODO: 2. get reprs of the patch duo's with filter repr
+            # TODO: 3. find label of each duo, depending on objective
+
+            patch1, patch2, label = find_hard_positives_twopatches(patches)
+            z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+            inputs.append(z)
+            targets.append(label)
+
+            patch1, patch2, label = get_hard_negatives_twopatches(patches)
+            z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+            inputs.append(z)
+            targets.append(label)
+
+            patch1, patch2, label = get_randoms_twopatches(patches)
+            z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+            inputs.append(z)
+            targets.append(label)
+
+    dataset_train = list(zip(inputs, targets))
+    print("len dataset: ", len(dataset_train))
+
+    if split == "train":
+        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
+    else:
+        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=False)
+
+    return dataloader
 
 
 if __name__ == "__main__":

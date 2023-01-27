@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as plticker
 from PIL import Image
 import bounding_boxes
-import utils
+
+# import utils
 import pickle
 from collections import defaultdict
 
@@ -10,8 +11,8 @@ from collections import defaultdict
 def open_image_withpatches(imgname, dataset, split, to_save=False):
 
     image = Image.open(
-        f"../data/{dataset}/images/{split}/{imgname}"
-        # f"../examples/{dataset}/{imgname}"
+        # f"../data/{dataset}/images/{split}/{imgname}"
+        f"../examples/{dataset}/30patchimages/{imgname}"
     )
     my_dpi = 300
 
@@ -56,15 +57,17 @@ def open_image_withpatches(imgname, dataset, split, to_save=False):
 
     if to_save:
         plt.savefig(
-            f"../examples/{dataset}/patches_{imgname}",
+            # f"../examples/{dataset}/patches_{imgname}",
+            f"../examples/{dataset}/30patchimages/patches_{imgname}",
             bbox_inches="tight",
             pad_inches=0,
         )
 
-    plt.show()
+    # plt.show()
 
 
 def get_all_patches_with_objects(img_filename, dataset, split):
+    """New version: returns dictionary of patch numbers with box"""
     img_path = f"../data/{dataset}/images/{split}/{img_filename}"
     boxes = bounding_boxes.get_boxes(img_filename, dataset, split)
 
@@ -72,16 +75,35 @@ def get_all_patches_with_objects(img_filename, dataset, split):
     height, width = img.size
     step = int(height / 7)
 
-    patches = []
+    patches = defaultdict(lambda: [])
     for j, y in enumerate(range(0, step * 7, step)):
         for i, x in enumerate(range(0, step * 7, step)):
             number = i + j * 7
             patch = (x, y, x + int(width / 7), y + int(height / 7))
             for box in boxes:
-                if check_box_in_patch(patch, box):
-                    patches.append(number)
-                    break
+                if check_box_in_patch(patch, box["box"]):
+                    patches[number].append(box)
     return patches
+
+
+# def get_all_patches_with_objects(img_filename, dataset, split):
+#     img_path = f"../data/{dataset}/images/{split}/{img_filename}"
+#     boxes = bounding_boxes.get_boxes(img_filename, dataset, split)
+
+#     img = Image.open(img_path)
+#     height, width = img.size
+#     step = int(height / 7)
+
+#     patches = []
+#     for j, y in enumerate(range(0, step * 7, step)):
+#         for i, x in enumerate(range(0, step * 7, step)):
+#             number = i + j * 7
+#             patch = (x, y, x + int(width / 7), y + int(height / 7))
+#             for box in boxes:
+#                 if check_box_in_patch(patch, box):
+#                     patches.append(number)
+#                     break
+#     return patches
 
 
 def check_box_in_patch(patch, box):
@@ -176,17 +198,19 @@ if __name__ == "__main__":
     # open_image_withpatches("bb_10295.png", "sup1", "train", to_save=True)
     # print(get_all_patches_with_objects("10295.png", "sup1", "train"))
 
-    analyze_amount_objectpatches("sup1", "train", balance_objective=None, to_save=True)
-    visualize_N_objectpatches("sup1", "train", balance_objective=None, to_save=True)
-    # analyze_amount_objectpatches(
-    #     "sup1", "train", balance_objective="n_colors", to_save=True
-    # )
-    # visualize_N_objectpatches(
-    #     "sup1", "train", balance_objective="n_colors", to_save=True
-    # )
-    # analyze_amount_objectpatches(
-    #     "sup1", "train", balance_objective="n_objects", to_save=True
-    # )
-    # visualize_N_objectpatches(
-    #     "sup1", "train", balance_objective="n_objects", to_save=True
-    # )
+    # import shutil
+
+    # objectpatches = open_N_objectpatches("sup1", "train", balance_objective="n_colors")
+    # thirty_ids = [id for id, value in objectpatches.items() if value == 30]
+    # print(len(thirty_ids))
+
+    # for id in thirty_ids:
+    #     src_path = f"../data/sup1/images/train/{id}"
+    #     dst_path = f"../examples/sup1/30patchimages/{id}"
+    #     shutil.copy(src_path, dst_path)
+
+    import os
+
+    for img_name in os.listdir("../examples/sup1/30patchimages"):
+        if img_name[0] == "b" and img_name[1] == "b":
+            open_image_withpatches(img_name, "sup1", "train", to_save=True)

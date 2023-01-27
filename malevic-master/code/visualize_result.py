@@ -49,9 +49,15 @@ def plot_accuracy_probes(config):
 
     for result in results:
         x = [key for key in result.keys()]
+        while len(x) < 17:
+            x.append(np.nan)
         # y = [np.mean(result[key]) for key in x if key < len(result) else 0]
         y = [np.mean(result[key]) for key in result.keys()]
+        while len(y) < 17:
+            y.append(np.nan)
         yerr = [np.std(result[key]) for key in result.keys()]
+        while len(yerr) < 17:
+            yerr.append(np.nan)
         xs.append(x)
         ys.append(y)
         yerrors.append(yerr)
@@ -66,8 +72,7 @@ def plot_accuracy_probes(config):
                 marker="o",
                 label=config["labels"][i],
             )
-        x = [key for key in results[0].keys()]
-        plt.xticks(x, labels=layer2name.values(), rotation=45)
+        plt.xticks(range(17), labels=layer2name.values(), rotation=45)
         plt.suptitle(f"Accuracy probes from representations {info_fig}")
     else:
         labels = [label.replace(" - transformer", "") for label in layer2name.values()]
@@ -142,14 +147,13 @@ def plot_accuracy_probes(config):
 if __name__ == "__main__":
 
     config = {
-        "no_plots": 3,
+        "no_plots": 2,
         "filenames": [
-            "../results/test_results_MLP2_sup1_n_colors_balanced_no_layernorm.pickle",
-            "../results/test_results_MLP2_sup1_n_colors_balanced_filtered_{30}_no_layernorm.pickle",
-            "../results/test_results_MLP2_sup1_n_colors_balanced_filtered_{30}_single_patch_no_layernorm.pickle",
+            "../results/test_results_MLP2_sup1_shape_balanced_filtered_{30}_no_layernorm.pickle",
+            "../results/test_results_MLP2_sup1_color_balanced_filtered_{30}_no_layernorm.pickle",
         ],
-        "labels": ["Original", "30 object patches", "Single patch"],
-        "info_fig": "(sup1, n_colors, balanced, MLP2)",
+        "labels": ["Shape", "Color"],
+        "info_fig": "(sup1, balanced, MLP2)",
         "save": True,
         "only_transformer": False,
     }

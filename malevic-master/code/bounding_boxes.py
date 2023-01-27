@@ -18,11 +18,20 @@ def get_rotation(obj, img, resolution):
     cc = convert_coordinate(obj["cc"], resolution)
     r = convert_coordinate(obj["radius"], resolution)
     if obj["shape"] == "triangle":
-        if cc + 2 >= resolution:
+        if cc + 3 >= resolution:
             return "vert"
-        if rr > resolution:
+        if rr >= resolution:
             return "horiz"
-        if img[cc + 2, rr] == img[cc - 2, rr]:
+        if img[cc + 3, rr] == img[cc - 3, rr]:
+            return "horiz"
+        elif cc + r >= resolution:
+            return "vert"
+        elif (
+            img[cc - r, rr - 2 * r - 1] == img[cc + r, rr - 2 * r - 1]
+            and img[cc - r, rr - 2 * r - 1] != (0, 0, 0, 255)
+            and img[cc - r, rr - 2 * r - 1] == img[cc, rr - 4]
+        ):
+            print("Triggered here")
             return "horiz"
         else:
             return "vert"
@@ -111,13 +120,14 @@ def get_boxes(img_filename, dataset="sup1", split="train"):
 
     boxes = []
     for obj in objects:
-        boxes.append(obj["box"])
+        boxes.append(obj)
 
     return boxes
 
 
 def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
-    img_path = f"../data/{dataset}/images/{split}/{img_filename}"
+    # img_path = f"../data/{dataset}/images/{split}/{img_filename}"
+    img_path = f"../examples/{dataset}/30patchimages/{img_filename}"
     boxes = get_boxes(img_filename, dataset, split)
 
     plt.rcParams["figure.figsize"] = (10, 10)
@@ -132,7 +142,8 @@ def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
     if to_save:
         plt.axis("off")
         plt.savefig(
-            f"../examples/{dataset}/bb_{img_filename}",
+            # f"../examples/{dataset}/bb_{img_filename}",
+            f"../examples/{dataset}/30patchimages/bb_{img_filename}",
             bbox_inches="tight",
             pad_inches=0,
         )
@@ -141,6 +152,11 @@ def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
 
 
 if __name__ == "__main__":
-    make_img_boxes(
-        img_filename="10295.png", dataset="sup1", split="train", to_save=True
-    )
+    import os
+
+    for img in os.listdir("../examples/sup1/30patchimages"):
+        make_img_boxes(img_filename=img, dataset="sup1", split="train", to_save=True)
+
+    # make_img_boxes(
+    #     img_filename="10241.png", dataset="sup1", split="train", to_save=False
+    # )

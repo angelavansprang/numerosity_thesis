@@ -9,7 +9,6 @@ def make_representations_visual(
     model,
     preprocess,
     dataset="sup1",
-    file_path="../data/sup1/representations/",
     to_store=False,
     balance_objective=None,
 ):
@@ -22,11 +21,9 @@ def make_representations_visual(
     Stores:
     clip_data_vis (dict): img_id is key, value is the tensor (of last layer)
     """
-    if dataset == "pos":
-        splits = ["test"]
-    elif dataset == "sup1":
-        splits = ["train", "test", "val"]
+    splits = ["train", "test", "val"]
     data_location = [f"../data/{dataset}/images/{split}/" for split in splits]
+    file_path = f"../data/{dataset}/representations/"
 
     for loc in data_location:
         split = loc.replace(f"../data/{dataset}/images/", "")
@@ -75,16 +72,16 @@ if __name__ == "__main__":
         device,
         model,
         preprocess,
-        dataset="sup1",
+        dataset="pos",
         to_store=True,
-        balance_objective="n_colors",
+        balance_objective=None,
     )
 
-    make_representations_visual(
-        device,
-        model,
-        preprocess,
-        dataset="sup1",
-        to_store=True,
-        balance_objective="n_objects",
-    )
+    # make_representations_visual(
+    #     device,
+    #     model,
+    #     preprocess,
+    #     dataset="pos",
+    #     to_store=True,
+    #     balance_objective="n_objects",
+    # )
