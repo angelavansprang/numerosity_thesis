@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as plticker
 from PIL import Image
 import bounding_boxes
-
-# import utils
+import os
+import utils
 import pickle
 from collections import defaultdict
 
@@ -84,6 +84,28 @@ def get_all_patches_with_objects(img_filename, dataset, split):
                 if check_box_in_patch(patch, box["box"]):
                     patches[number].append(box)
     return patches
+
+
+def store_patches_dataset(dataset):
+    splits = ["train", "test", "val"]
+    data_location = [f"../data/{dataset}/images/{split}/" for split in splits]
+    file_path = f"../data/{dataset}/representations/"
+
+    for loc in data_location:
+        split = loc.replace(f"../data/{dataset}/images/", "")
+        split = split.replace("/", "")
+        repr_name = f"{dataset}_{split}" + "_patches.pickle"
+        img_ids = os.listdir(loc)
+
+        patches = {}
+
+        for img_name in img_ids:
+            img_id = img_name.replace(".png", "")
+            img_patches = get_all_patches_with_objects(img_name, dataset, split)
+            patches[img_id] = dict(img_patches)
+
+        with open(file_path + repr_name, "wb") as f:
+            pickle.dump(patches, f)
 
 
 # def get_all_patches_with_objects(img_filename, dataset, split):
@@ -209,8 +231,10 @@ if __name__ == "__main__":
     #     dst_path = f"../examples/sup1/30patchimages/{id}"
     #     shutil.copy(src_path, dst_path)
 
-    import os
+    # import os
 
-    for img_name in os.listdir("../examples/sup1/30patchimages"):
-        if img_name[0] == "b" and img_name[1] == "b":
-            open_image_withpatches(img_name, "sup1", "train", to_save=True)
+    # for img_name in os.listdir("../examples/sup1/30patchimages"):
+    #     if img_name[0] == "b" and img_name[1] == "b":
+    #         open_image_withpatches(img_name, "sup1", "train", to_save=True)
+
+    store_patches_dataset("pos")

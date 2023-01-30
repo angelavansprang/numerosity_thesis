@@ -505,10 +505,18 @@ def build_dataloader_patchbased(
     # if balanced:
     #     balanced_labels, _ = make_balanced_data(labels, objective)
 
+    file_name_patches = (
+        f"../data/{dataset}/representations/{dataset}_{split}_patches.pickle"
+    )
+
+    with open(file_name_patches, "rb") as f:
+        objectpatches = pickle.load(f)
+
     for img_id, repr in repr.items():
-        patches = transformer_patches.get_all_patches_with_objects(
-            f"{img_id}.png", dataset, split
-        )  # TODO: MAYBE JUST STORE THESE?
+        patches = objectpatches[img_id]
+        # patches = transformer_patches.get_all_patches_with_objects(
+        #     f"{img_id}.png", dataset, split
+        # )  # TODO: MAYBE JUST STORE THESE?
         nodes = patches.keys()
 
         if len(nodes) <= threshold:
@@ -546,48 +554,48 @@ def build_dataloader_patchbased(
 
 def get_neighboring_patches(patch_id):
     if patch_id == 0:
-        neigbors = [1, 7, 8]
+        neighbors = [1, 7, 8]
     elif patch_id == 6:
-        neigbors = [5, 12, 13]
+        neighbors = [5, 12, 13]
     elif patch_id == 42:
-        neigbors = [35, 36, 43]
+        neighbors = [35, 36, 43]
     elif patch_id == 48:
-        neigbors = [40, 41, 47]
+        neighbors = [40, 41, 47]
     elif patch_id < 7:
         # patch is in upper row
-        neigbors = [
+        neighbors = [
             patch_id + i
             for i in [-1, 1, 6, 7, 8]
             if patch_id + i >= 0 and patch_id < 49
         ]
     elif patch_id > 41:
         # patch is in lower row
-        neigbors = [
+        neighbors = [
             patch_id + i
             for i in [-8, -7, -6, -1, 1]
             if patch_id + i >= 0 and patch_id < 49
         ]
     elif patch_id % 7 == 0:
         # patch is in left column
-        neigbors = [
+        neighbors = [
             patch_id + i
             for i in [-7, -6, 1, 7, 8]
             if patch_id + i >= 0 and patch_id < 49
         ]
     elif patch_id % 7 == 6:
         # patch is in left column
-        neigbors = [
+        neighbors = [
             patch_id + i
             for i in [-8, -7, -1, 6, 7]
             if patch_id + i >= 0 and patch_id < 49
         ]
     else:
-        neigbors = [
+        neighbors = [
             patch_id + i
             for i in [-8, -7, -6, -1, 1, 6, 7, 8]
             if patch_id + i >= 0 and patch_id < 49
         ]
-    return neigbors
+    return neighbors
 
 
 def find_hard_positives_twopatches(patches):
@@ -678,13 +686,10 @@ def build_dataloader_twopatches(
         input2 = filter_repr(
             layer, [patch2], repr, single_patch=True, padding_up_to=threshold
         )
-        print(input1[0].shape)
-        print(input2[0].shape)
         z = torch.stack(
             [torch.from_numpy(input1[0]), torch.from_numpy(input2[0])]
         )  # TODO: Check if this works
         z = z.flatten()
-        print(z.shape)
         return z, label
 
     # class2label, label2class = get_class_colorshape(objective)
@@ -698,10 +703,18 @@ def build_dataloader_twopatches(
     inputs = []
     targets = []
 
+    file_name_patches = (
+        f"../data/{dataset}/representations/{dataset}_{split}_patches.pickle"
+    )
+
+    with open(file_name_patches, "rb") as f:
+        objectpatches = pickle.load(f)
+
     for img_id, repr in repr.items():
-        patches = transformer_patches.get_all_patches_with_objects(
-            f"{img_id}.png", dataset, split
-        )  # TODO: MAYBE JUST STORE THESE?
+        patches = objectpatches[img_id]
+        # patches = transformer_patches.get_all_patches_with_objects(
+        #     f"{img_id}.png", dataset, split
+        # )  # TODO: MAYBE JUST STORE THESE?
         nodes = patches.keys()
 
         if len(nodes) <= threshold:
