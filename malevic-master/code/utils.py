@@ -483,10 +483,16 @@ def build_dataloader_patchbased(
     Input:
     ids_val (list): contains ints of the IDs of the images that should be in the validation set.
     balanced (bool): whether the dataloaders should be made balanced (i.e. same number of instances per class)
-    objective (string): either 'color' or 'shape'
+    objective (string): ['n_objects', 'n_colors', 'color', 'shape']
     threshold (int): do not include images with more object patches than the threshold
     """
-    class2label, label2class = get_class_colorshape(objective)
+    if objective == "color" or objective == "shape":
+        class2label, label2class = get_class_colorshape(objective)
+    elif objective == "n_colors" or objective == "n_objects":
+        labels = get_classlabel(dataset, split, objective)
+        class2label, label2class = get_classlabel(
+            dataset=dataset, split=split, objective=objective
+        )
 
     if balanced:
         repr_path = f"../data/{dataset}/representations/{dataset}_{split}_balanced_n_colors_visual.pickle"
@@ -537,7 +543,11 @@ def build_dataloader_patchbased(
                 box = boxes[0]
                 # print(box)
                 # print(box[objective])
-                label = label2class[box[objective]]
+                if objective == "color" or objective == "shape":
+                    label = label2class[box[objective]]
+                elif objective == "n_colors" or objective == "n_objects":
+                    label = int(labels[int(img_id)][objective])
+                    label = label2class[label]
                 inputs.append(patch)
                 targets.append(label)
 
@@ -765,12 +775,19 @@ if __name__ == "__main__":
     labels_train = make_labels_dict(dataset="pos", split="train")
     labels_val = make_labels_dict(dataset="pos", split="val")
     labels_test = make_labels_dict(dataset="pos", split="test")
-    count_train = get_freqs_labels(labels_train, "n_objects")
-    count_val = get_freqs_labels(labels_val, "n_objects")
-    count_test = get_freqs_labels(labels_test, "n_objects")
+    count_train = get_freqs_labels(labels_train, "n_colors")
+    count_val = get_freqs_labels(labels_val, "n_colors")
+    count_test = get_freqs_labels(labels_test, "n_colors")
     print("train: ", count_train)
     print("val: ", count_val)
     print("test: ", count_test)
+
+    balanced_labels, _ = make_balanced_data(labels_train, objective="n_colors")
+    print("len balanced labels train: ", len(balanced_labels))
+    balanced_labels, _ = make_balanced_data(labels_val, objective="n_colors")
+    print("len balanced labels val: ", len(balanced_labels))
+    balanced_labels, _ = make_balanced_data(labels_test, objective="n_colors")
+    print("len balanced labels test: ", len(balanced_labels))
 
     # img_filename = "0.png"
     # dataset = "sup1"

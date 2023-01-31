@@ -74,14 +74,5 @@ if __name__ == "__main__":
         preprocess,
         dataset="pos",
         to_store=True,
-        balance_objective=None,
+        balance_objective="n_objects",
     )
-
-    # make_representations_visual(
-    #     device,
-    #     model,
-    #     preprocess,
-    #     dataset="pos",
-    #     to_store=True,
-    #     balance_objective="n_objects",
-    # )
