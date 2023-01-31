@@ -147,13 +147,19 @@ def plot_accuracy_probes(config):
 if __name__ == "__main__":
 
     config = {
-        "no_plots": 3,
+        "no_plots": 4,
         "filenames": [
             "../results/test_results_MLP2_pos_shape_unbalanced_filtered_{30}_no_layernorm.pickle",
             "../results/test_results_MLP2_sup1_color_balanced_filtered_{30}_no_layernorm.pickle",
             "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
+            "../results/new_test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
         ],
-        "labels": ["Shape (pos)", "Color (sup1)", "Binding Problem (pos)"],
+        "labels": [
+            "Shape (pos)",
+            "Color (sup1)",
+            "Binding Problem (pos)",
+            "Binding Problem (pos) - test on all combs",
+        ],
         "info_fig": "(MLP2)",
         "save": True,
         "only_transformer": False,

@@ -718,24 +718,34 @@ def build_dataloader_twopatches(
         nodes = patches.keys()
 
         if len(nodes) <= threshold:
-            # TODO: 1. find 3 repr patch duo's: hard positives, hard negatives, random
-            # TODO: 2. get reprs of the patch duo's with filter repr
-            # TODO: 3. find label of each duo, depending on objective
 
-            patch1, patch2, label = find_hard_positives_twopatches(patches)
-            z, label = stack_reprs_2patches(patch1, patch2, label, repr)
-            inputs.append(z)
-            targets.append(label)
+            if split == "train" or split == "val":
+                # find 3 repr patch duo's: hard positives, hard negatives, random
+                patch1, patch2, label = find_hard_positives_twopatches(patches)
+                z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                inputs.append(z)
+                targets.append(label)
 
-            patch1, patch2, label = get_hard_negatives_twopatches(patches)
-            z, label = stack_reprs_2patches(patch1, patch2, label, repr)
-            inputs.append(z)
-            targets.append(label)
+                patch1, patch2, label = get_hard_negatives_twopatches(patches)
+                z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                inputs.append(z)
+                targets.append(label)
 
-            patch1, patch2, label = get_randoms_twopatches(patches)
-            z, label = stack_reprs_2patches(patch1, patch2, label, repr)
-            inputs.append(z)
-            targets.append(label)
+                patch1, patch2, label = get_randoms_twopatches(patches)
+                z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                inputs.append(z)
+                targets.append(label)
+            elif split == "test":
+                nodes = list(nodes)
+                for patch1 in nodes:
+                    for patch2 in nodes:
+                        if patch2 > patch1:
+                            box1 = patches[patch1][0]
+                            box2 = patches[patch2][0]
+                            label = box1["object_id"] == box2["object_id"]
+                            z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                            inputs.append(z)
+                            targets.append(label)
 
     dataset_train = list(zip(inputs, targets))
     print("len dataset: ", len(dataset_train))
@@ -752,41 +762,44 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, preprocess = get_model_preprocess(device, model_type="ViT-B/32")
 
-    # labels = make_labels_dict(dataset="sup1", split="test")
-    # print("len labels: ", len(labels))
-    # balanced_labels, _ = make_balanced_data(labels, objective="n_objects")
-    # print("len balanced labels: ", len(balanced_labels))
+    labels_train = make_labels_dict(dataset="pos", split="train")
+    labels_val = make_labels_dict(dataset="pos", split="val")
+    labels_test = make_labels_dict(dataset="pos", split="test")
+    count_train = get_freqs_labels(labels_train, "n_objects")
+    count_val = get_freqs_labels(labels_val, "n_objects")
+    count_test = get_freqs_labels(labels_test, "n_objects")
+    print("train: ", count_train)
+    print("val: ", count_val)
+    print("test: ", count_test)
 
-    # TODO: check
+    # img_filename = "0.png"
+    # dataset = "sup1"
+    # split = "test"
+    # img_path = f"../data/{dataset}/images/{split}/{img_filename}"
+    # reprs = get_repr(img_path, device, model, preprocess)
+    # print(len(reprs), reprs[0].size())
+    # nodes = transformer_patches.get_all_patches_with_objects(
+    #     img_filename, dataset, split
+    # )
+    # print("nodes: ", nodes)
+    # print("amount of nodes: ", len(nodes))
+    # filt_repr = filter_repr(0, nodes, reprs, single_patch=True)
+    # print("len filt_repr: ", len(filt_repr))
+    # print("filt_repr[0]: ", filt_repr[0])
+    # print("filt_repr[0].shape: ", filt_repr[0].shape)
 
-    img_filename = "0.png"
-    dataset = "sup1"
-    split = "test"
-    img_path = f"../data/{dataset}/images/{split}/{img_filename}"
-    reprs = get_repr(img_path, device, model, preprocess)
-    print(len(reprs), reprs[0].size())
-    nodes = transformer_patches.get_all_patches_with_objects(
-        img_filename, dataset, split
-    )
-    print("nodes: ", nodes)
-    print("amount of nodes: ", len(nodes))
-    filt_repr = filter_repr(0, nodes, reprs, single_patch=True)
-    print("len filt_repr: ", len(filt_repr))
-    print("filt_repr[0]: ", filt_repr[0])
-    print("filt_repr[0].shape: ", filt_repr[0].shape)
-
-    img_filename = "1.png"
-    dataset = "sup1"
-    split = "test"
-    img_path = f"../data/{dataset}/images/{split}/{img_filename}"
-    reprs = get_repr(img_path, device, model, preprocess)
-    print(len(reprs), reprs[8].size())
-    nodes = transformer_patches.get_all_patches_with_objects(
-        img_filename, dataset, split
-    )
-    print("nodes: ", nodes)
-    print("amount of nodes: ", len(nodes))
-    filt_repr = filter_repr(8, nodes, reprs, single_patch=True)
-    print("len filt_repr: ", len(filt_repr))
-    print("filt_repr[0]: ", filt_repr[0])
-    print("filt_repr[0].shape: ", filt_repr[0].shape)
+    # img_filename = "1.png"
+    # dataset = "sup1"
+    # split = "test"
+    # img_path = f"../data/{dataset}/images/{split}/{img_filename}"
+    # reprs = get_repr(img_path, device, model, preprocess)
+    # print(len(reprs), reprs[8].size())
+    # nodes = transformer_patches.get_all_patches_with_objects(
+    #     img_filename, dataset, split
+    # )
+    # print("nodes: ", nodes)
+    # print("amount of nodes: ", len(nodes))
+    # filt_repr = filter_repr(8, nodes, reprs, single_patch=True)
+    # print("len filt_repr: ", len(filt_repr))
+    # print("filt_repr[0]: ", filt_repr[0])
+    # print("filt_repr[0].shape: ", filt_repr[0].shape)
