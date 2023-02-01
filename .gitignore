@@ -14,6 +14,11 @@
 !/malevic-master/results
 !/malevic-master/plots
 
+/amnesic_probing-main/*
+!/amnesic_probing-main/code # This is my own code
+/amnesic_probing-main/code/*
+!/amnesic_probing-main/code/experiment.py
+
 /PyJSONViewer-1.6.0
 
 /Transformer_MM_Explainability
