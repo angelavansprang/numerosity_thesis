@@ -11,13 +11,11 @@
 !/malevic-master/code/experiment_one_layer.py
 !/malevic-master/code/transformer_patches.py
 !/malevic-master/code/train_probe_twopatches.py
+!/malevic-master/code/amnesic_probing.py
 !/malevic-master/results
 !/malevic-master/plots
 
-/amnesic_probing-main/*
-!/amnesic_probing-main/code # This is my own code
-/amnesic_probing-main/code/*
-!/amnesic_probing-main/code/experiment.py
+/amnesic_probing-main
 
 /PyJSONViewer-1.6.0
 

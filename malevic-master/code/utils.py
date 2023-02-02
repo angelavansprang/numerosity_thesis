@@ -15,11 +15,11 @@ import models
 import transformer_patches
 
 sys.path.append("../../")
-import Transformer_MM_Explainability.CLIP.clip as clip
+# import Transformer_MM_Explainability.CLIP.clip as clip
 
 # GLOBAL VARIABLES
 global_path = ".."
-# padding_up_to = 30
+padding_up_to = 30
 
 # Use this dictionary to find the number of layers necessary for the linear probe,
 # (the input size of the linear probe depends on the size of the representations)
@@ -495,7 +495,7 @@ def build_dataloader_patchbased(
         )
 
     if balanced:
-        repr_path = f"../data/{dataset}/representations/{dataset}_{split}_balanced_n_colors_visual.pickle"
+        repr_path = f"../data/{dataset}/representations/{dataset}_{split}_balanced_{objective}_visual.pickle"
     else:
         repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
     # repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
