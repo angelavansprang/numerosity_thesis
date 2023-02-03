@@ -149,28 +149,17 @@ def plot_accuracy_probes(config):
 if __name__ == "__main__":
 
     config = {
-        "no_plots": 1,
+        "no_plots": 3,
         "filenames": [
-            "../results/test_results_MLP2_sup1_n_colors_balanced_filtered_{30}_single_patch_no_layernorm.pickle",
-            # "../results/test_results_linear_layer_sup1_n_objects_balanced_no_layernorm.pickle",
-            # "../results/test_results_MLP_sup1_n_objects_balanced_layernorm.pickle",
-            # "../results/test_results_MLP2_sup1_n_objects_balanced_no_layernorm.pickle",
-            # "../results/test_results_MLP2_sup1_n_objects_balanced_layernorm.pickle",
-            # "../results/test_results_linear_layer_pos_n_objects_balanced_unfiltered_no_layernorm.pickle",
-            # "../results/test_results_MLP_pos_n_objects_balanced_unfiltered_no_layernorm.pickle",
-            # "../results/test_results_MLP2_pos_n_objects_balanced_unfiltered_no_layernorm.pickle",
-            # "../results/test_results_MLP2_pos_n_objects_balanced_unfiltered_layernorm.pickle",
+            "../results/test_results_MLP2_sup1_color_balanced_filtered_{30}_no_layernorm.pickle",
+            "../results/test_results_MLP2_pos_shape_unbalanced_filtered_{30}_no_layernorm.pickle",
+            "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
         ],
-        "labels": [
-            "n_colors",
-            # "MLP",
-            # "MLP2",
-            # "MLP2 - layernorm",
-        ],
-        "info_fig": "(sup1, balanced, single patch)",
+        "labels": ["color (sup1)", "shape (pos)", "binding problem"],
+        "info_fig": "(old)",
         "save": True,
         "only_transformer": False,
-        "entire_y_axis": True,
+        "entire_y_axis": False,
     }
 
     results = plot_accuracy_probes(config)
