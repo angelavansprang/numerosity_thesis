@@ -13,6 +13,8 @@
 !/malevic-master/code/train_probe_twopatches.py
 !/malevic-master/code/amnesic_probing.py
 !/malevic-master/code/utils_amnesic_probing.py
+!/malevic-master/code/array_script.job
+!/malevic-master/code/script.job
 !/malevic-master/results
 !/malevic-master/plots
 
