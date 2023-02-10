@@ -12,6 +12,7 @@
 !/malevic-master/code/transformer_patches.py
 !/malevic-master/code/train_probe_twopatches.py
 !/malevic-master/code/amnesic_probing.py
+!/malevic-master/code/utils_amnesic_probing.py
 !/malevic-master/results
 !/malevic-master/plots
 
