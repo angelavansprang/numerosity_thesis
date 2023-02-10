@@ -164,7 +164,7 @@ def train_classifier(D_in, D_out, loader_train, loader_val, loader_test):
     return performance[0]["acc"], classifier
 
 
-def check_projections_ViT(P, dataset, objective, balanced, threshold=30, D_in=768):
+def check_projections_ViT(dataset, objective, balanced, threshold=30, D_in=768):
     """
     Perform projection P in all layers of the ViT, and train a classifier on the objective to check whether the projection worked
     """
@@ -190,6 +190,10 @@ def check_projections_ViT(P, dataset, objective, balanced, threshold=30, D_in=76
         X_val = np.asarray(X_val)
         X_test = np.asarray(X_test)
 
+        P = utils_amnesic_probing.open_intersection_nullspaces(
+            dataset, objective, layer
+        )
+
         # project
         X_train = X_train.dot(P)
         X_val = X_val.dot(P)
@@ -207,7 +211,7 @@ def check_projections_ViT(P, dataset, objective, balanced, threshold=30, D_in=76
         acc = train_classifier(D_in, D_out, loader_train, loader_val, loader_test)
         results[layer] = acc
 
-    return check_projections_ViT
+    return results
 
 
 def get_alldata_perlayer(dataset, layer, objective, balanced, threshold=30):
@@ -265,20 +269,25 @@ if __name__ == "__main__":
         "balanced": args.balanced,
     }
 
-    (
-        P,
-        rowspace_projections,
-        Ws,
-        all_projections,
-        best_projection,
-    ) = get_debiasing_projection(
-        num_classifiers,
-        args.dataset,
-        args.layer,
-        args.amnesic_objective,
-        args.balanced,
-        threshold,
-        D_in=768,
-        to_save=True,
-        filename=filename,
+    results = check_projections_ViT(
+        args.dataset, args.amnesic_objective, balanced=False, threshold=30, D_in=768
     )
+    print(results)
+
+    # (
+    #     P,
+    #     rowspace_projections,
+    #     Ws,
+    #     all_projections,
+    #     best_projection,
+    # ) = get_debiasing_projection(
+    #     num_classifiers,
+    #     args.dataset,
+    #     args.layer,
+    #     args.amnesic_objective,
+    #     args.balanced,
+    #     threshold,
+    #     D_in=768,
+    #     to_save=True,
+    #     filename=filename,
+    # )

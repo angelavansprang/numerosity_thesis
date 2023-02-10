@@ -25,6 +25,7 @@ def experiment_per_layer(
     """
     if objective == "n_colors":
         D_out = 4
+        # D_out = 5
     elif objective == "n_objects":
         D_out = 5
     elif objective == "shape":
@@ -95,6 +96,11 @@ def experiment_per_layer(
             )
 
         for i in range(5):
+            print("D_in: ", D_in)
+            print("D_out: ", D_out)
+            for batch, labels in loader_train:
+                print(batch[0].shape)
+                break
             model = utils.open_model(D_in, D_out, layernorm, modelname)
             trainer = pl.Trainer(
                 accelerator="gpu",
@@ -102,6 +108,7 @@ def experiment_per_layer(
                 enable_progress_bar=False,
                 log_every_n_steps=100,
             )
+            print("NO PROBLEM BEFORE TRAINING")
             train_info = trainer.fit(model, loader_train, loader_val)
             performance = trainer.test(dataloaders=loader_test)
 

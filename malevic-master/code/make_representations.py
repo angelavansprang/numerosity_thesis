@@ -11,6 +11,7 @@ def make_representations_visual(
     dataset="sup1",
     to_store=False,
     balance_objective=None,
+    remove_key=None,
 ):
     """Makes visual representation from the VALSE images
 
@@ -39,7 +40,9 @@ def make_representations_visual(
 
         if balance_objective is not None:
             labels = utils.make_labels_dict(dataset, split)
-            balanced_subset, _ = utils.make_balanced_data(labels, balance_objective)
+            balanced_subset, _ = utils.make_balanced_data(
+                labels, balance_objective, remove_key=remove_key
+            )
 
         for img_name in img_ids:
             img_path = loc + img_name
@@ -74,5 +77,6 @@ if __name__ == "__main__":
         preprocess,
         dataset="pos",
         to_store=True,
-        balance_objective="n_objects",
+        balance_objective="n_colors",
+        remove_key=1,
     )

@@ -13,9 +13,10 @@ from torch.utils.data import DataLoader
 
 import models
 import transformer_patches
+import utils_amnesic_probing
 
 sys.path.append("../../")
-# import Transformer_MM_Explainability.CLIP.clip as clip
+import Transformer_MM_Explainability.CLIP.clip as clip
 
 # GLOBAL VARIABLES
 global_path = ".."
@@ -284,10 +285,11 @@ def get_freqs_labels(labels, objective):
     return count
 
 
-def make_balanced_data(labels, objective):
+def make_balanced_data(labels, objective, remove_key=None):
     """input:
     labels (dict): as returned by make_labels_dict()
     objective (string): "n_objects"  or "n_colors"
+    remove_key (int or None): key to remove from count dict (i.e. value in labels)
 
     returns:
     balanced_labels: balanced version of labels (i.e. shortened)
@@ -295,28 +297,45 @@ def make_balanced_data(labels, objective):
 
     """
     count = get_freqs_labels(labels, objective)
+    if remove_key is not None:
+        if remove_key in count.keys():
+            del count[remove_key]
     max = min(count.values())  # min frequency is our max frequency after balancing
 
     balanced_labels = {}
     counter = defaultdict(lambda: 0)
     for key, value in labels.items():
-        label = value[objective]
-        if counter[label] < max:
-            balanced_labels[key] = value
-            counter[label] += 1
+        # print("remove_key: ", remove_key)
+        # print("value[objective]: ", value[objective])
+        if int(value[objective]) != remove_key:
+            label = value[objective]
+            if counter[label] < max:
+                balanced_labels[key] = value
+                counter[label] += 1
+        # else:
+        #     print(f"Removed value {value}")
+        #     break
     print(f"Made balanced data for {objective}; {max} per class; {dict(count)}")
     return balanced_labels, objective
 
 
-def get_classlabel(dataset, split="train", objective="n_colors"):
+def get_classlabel(dataset, split="train", objective="n_colors", remove_key=None):
     """
     objective (string): n_colors/ n_objects
+    remove_key (int): objective to remove
 
     returns:
     class2label (dict): from learning class to actual label (e.g. n_colors=5)
     label2class (dict): from actual label (e.g. n_colors=5) to class (e.g. 3)
     """
     labels = make_labels_dict(dataset, split)
+
+    if remove_key is not None:
+        labels_cp = copy.deepcopy(labels)
+        for id, value in labels.items():
+            if int(value[objective]) == remove_key:
+                del labels_cp[id]
+        labels = labels_cp
     count = get_freqs_labels(labels, objective)
 
     class2label = {}
@@ -327,6 +346,9 @@ def get_classlabel(dataset, split="train", objective="n_colors"):
         label2class[number] = number - min(count.keys())
         class2label[i] = number
         i += 1
+
+    print(class2label)
+    print(label2class)
 
     return class2label, label2class
 
@@ -403,8 +425,14 @@ def build_dataloader(
     TODO: IMPLEMENT BALANCED == TRUE. Current implementation not yet working, due to mismatch in shapes (in both MLP and MLP2)
     Try new approach using the representations already present, and selecting the correct ones based on selection function from utils.py
     """
+    if dataset == "pos" and objective == "n_colors":
+        remove_key = 1
+    else:
+        remove_key = None
 
-    class2label, label2class = get_classlabel(dataset, split=split, objective=objective)
+    class2label, label2class = get_classlabel(
+        dataset, split=split, objective=objective, remove_key=remove_key
+    )
     labels = make_labels_dict(dataset, split=split)
     if balanced:
         repr_path = f"../data/{dataset}/representations/{dataset}_{split}_balanced_{objective}_visual.pickle"
@@ -424,11 +452,19 @@ def build_dataloader(
     #     balanced_labels, _ = make_balanced_data(labels, objective)
     filter = padding_up_to is not None
 
+    file_name_patches = (
+        f"../data/{dataset}/representations/{dataset}_{split}_patches.pickle"
+    )
+
+    with open(file_name_patches, "rb") as f:
+        objectpatches = pickle.load(f)
+
     for img_id, repr in repr.items():
         if filter:
-            patches = transformer_patches.get_all_patches_with_objects(
-                f"{img_id}.png", dataset, split
-            )  # TODO: MAYBE JUST STORE THESE?
+            patches = objectpatches[img_id]
+            # patches = transformer_patches.get_all_patches_with_objects(
+            #     f"{img_id}.png", dataset, split
+            # )  # TODO: MAYBE JUST STORE THESE?
             nodes = patches.keys()
 
             if len(nodes) <= padding_up_to:
@@ -440,6 +476,9 @@ def build_dataloader(
                     padding_up_to=padding_up_to,
                 )
                 label = int(labels[int(img_id)][objective])
+                # print("label: ", label)
+                # if label == 1:
+                #     print("Found the problem")
                 label = label2class[label]
                 if not single_patch:
                     input = filter_repr(
@@ -458,8 +497,10 @@ def build_dataloader(
             inputs.append(input)
             targets.append(label)
 
+    # print("len(inputs): ", len(inputs))
+    # print("len(targets): ", len(targets))
     dataset_train = list(zip(inputs, targets))
-    print("len dataset: ", len(dataset_train))
+    # print("len dataset: ", len(dataset_train))
 
     if split == "train":
         dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
@@ -555,9 +596,13 @@ def build_dataloader_patchbased(
     print("len dataset: ", len(dataset_train))
 
     if split == "train":
-        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
+        dataloader = DataLoader(
+            dataset_train, batch_size=batch_size, shuffle=True, num_workers=72
+        )
     else:
-        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=False)
+        dataloader = DataLoader(
+            dataset_train, batch_size=batch_size, shuffle=False, num_workers=72
+        )
 
     return dataloader, class2label
 
@@ -677,6 +722,7 @@ def build_dataloader_twopatches(
     split="train",
     batch_size=10,
     threshold=30,
+    amnesic_obj=None,
 ):
     """Return dataloaders with the (visual) CLIP representations of one patch as data and the objective as label.
 
@@ -757,13 +803,33 @@ def build_dataloader_twopatches(
                             inputs.append(z)
                             targets.append(label)
 
+    if amnesic_obj is not None:  # TODO: Check if this works
+        amnesic_inputs = []
+        P = utils_amnesic_probing.open_intersection_nullspaces(
+            dataset, amnesic_obj, layer
+        )
+        P = torch.from_numpy(P)
+        for z in inputs:
+            z1 = z[:768]
+            z2 = z[768:]
+            z1 = z1.dot(P)
+            z2 = z2.dot(P)
+            amnesic_z = torch.stack([z1, z2])
+            amnesic_z = amnesic_z.flatten()
+            amnesic_inputs.append(amnesic_z)
+        inputs = amnesic_inputs
+
     dataset_train = list(zip(inputs, targets))
     print("len dataset: ", len(dataset_train))
 
     if split == "train":
-        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
+        dataloader = DataLoader(
+            dataset_train, batch_size=batch_size, shuffle=True, num_workers=72
+        )
     else:
-        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=False)
+        dataloader = DataLoader(
+            dataset_train, batch_size=batch_size, shuffle=False, num_workers=72
+        )
 
     return dataloader
 

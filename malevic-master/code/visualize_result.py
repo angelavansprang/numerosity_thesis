@@ -48,10 +48,9 @@ def plot_accuracy_probes(config):
     ax = fig.add_subplot(1, 1, 1)
 
     for result in results:
-        x = [key for key in result.keys()]
+        x = [int(key) for key in result.keys()]
         while len(x) < 17:
             x.append(np.nan)
-        # y = [np.mean(result[key]) for key in x if key < len(result) else 0]
         y = [np.mean(result[key]) for key in result.keys()]
         while len(y) < 17:
             y.append(np.nan)
@@ -90,6 +89,10 @@ def plot_accuracy_probes(config):
             f"Accuracy probes from representations transformer only {info_fig}"
         )
     ax.legend()
+
+    if config["entire_y_axis"]:
+        print("Yeah i'm trying")
+        plt.ylim([0, 1.0])
 
     if config["save"]:
         if N_probes == 4:
@@ -137,8 +140,6 @@ def plot_accuracy_probes(config):
         imgname = imgname.replace("../results", "../plots")
         plt.ylabel("Accuracy")
         plt.xlabel("Layer")
-        if config["entire_y_axis"]:
-            plt.ylim([0, 1.0])
         plt.savefig(imgname, bbox_inches="tight")
 
     plt.show()
@@ -149,17 +150,20 @@ def plot_accuracy_probes(config):
 if __name__ == "__main__":
 
     config = {
-        "no_plots": 3,
+        "no_plots": 2,
         "filenames": [
-            "../results/test_results_MLP2_sup1_color_balanced_filtered_{30}_no_layernorm.pickle",
-            "../results/test_results_MLP2_pos_shape_unbalanced_filtered_{30}_no_layernorm.pickle",
-            "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
+            # "../results/test_results_linear_layer_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
+            "../results/test_results_linear_layer_pos_color_unbalanced_filtered_{30}_single_patch_no_layernorm.pickle",
+            "../results/test_results_linear_layer_pos_shape_unbalanced_filtered_{30}_single_patch_no_layernorm.pickle",
+            # "../results/test_results_linear_layer_pos_n_colors_balanced_filtered_{30}_single_patch_no_layernorm.pickle",
+            # "../results/test_results_linear_layer_pos_n_objects_balanced_filtered_{30}_single_patch_no_layernorm.pickle",
         ],
-        "labels": ["color (sup1)", "shape (pos)", "binding problem"],
-        "info_fig": "(old)",
-        "save": True,
+        "labels": ["color", "shape"],
+        # "labels": ["MLP (sup1)"],
+        "info_fig": "(single patch, linear layer, pos)",
+        "save": False,
         "only_transformer": False,
-        "entire_y_axis": False,
+        "entire_y_axis": True,
     }
 
     results = plot_accuracy_probes(config)
