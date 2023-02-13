@@ -30,7 +30,7 @@ def get_data_patchbased(
     if objective == "color" or objective == "shape":
         class2label, label2class = utils.get_class_colorshape(objective)
     elif objective == "n_colors" or objective == "n_objects":
-        labels = utils.get_classlabel(dataset, split, objective)
+        labels = utils.make_labels_dict(dataset, split)
         class2label, label2class = utils.get_classlabel(
             dataset=dataset, split=split, objective=objective
         )
@@ -121,9 +121,10 @@ def open_intersection_nullspaces(dataset, objective, layer):
     with open(path + file_name, "rb") as f:
         rowspace_projections = pickle.load(f)
     P = get_projection_to_intersection_of_nullspaces(
-                rowspace_projections, input_dim=768
-            )
+        rowspace_projections, input_dim=768
+    )
     return P
+
 
 def get_rowspace_projection(W: np.ndarray) -> np.ndarray:
     """

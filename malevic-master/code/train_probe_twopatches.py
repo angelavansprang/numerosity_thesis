@@ -93,8 +93,6 @@ def experiment_per_layer(
                 save_models_path = f'../models/{modelname}_layer{layer}_{i}_{dataset}_{objective}_{"balanced" if balanced else "unbalanced"}_{"filtered" if filter else "unfiltered"}{"_single_patch" if single_patch else ""}_{"layernorm" if layernorm else "no_layernorm"}{"_amnesic" + str({args.amnesic_obj}) if args.amnesic_obj is not None else ""}.pt'
                 torch.save(model.state_dict(), save_models_path)
 
-        break
-
     return results
 
 

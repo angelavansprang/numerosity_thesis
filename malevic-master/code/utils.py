@@ -347,8 +347,8 @@ def get_classlabel(dataset, split="train", objective="n_colors", remove_key=None
         class2label[i] = number
         i += 1
 
-    print(class2label)
-    print(label2class)
+    # print(class2label)
+    # print(label2class)
 
     return class2label, label2class
 
@@ -810,26 +810,15 @@ def build_dataloader_twopatches(
         )
         P = torch.from_numpy(P)
         for z in inputs:
-            print("z.shape: ", z.shape)
             z1 = z[:768]
             z2 = z[768:]
-            print("z1.shape: ", z1.shape)
-            print("z2.shape: ", z2.shape)
-            print("P.shape: ", P.shape)
             z1 = torch.unsqueeze(z1, 0)
             z2 = torch.unsqueeze(z2, 0)
-            print("z1.shape: ", z1.shape)
-            print("z2.shape: ", z2.shape)
-            print("z1 type: ", z1.dtype)
-            print("z2 type: ", z2.dtype)
             z1 = z1.to(torch.float32)
             z2 = z2.to(torch.float32)
-            print("z1 type: ", z1.dtype)
-            print("z2 type: ", z2.dtype)
+            P = P.to(torch.float32)
             z1 = z1 @ P
             z2 = z2 @ P
-            # z2 = z2.dot(P)
-            # z2 = z2.dot(P)
             amnesic_z = torch.stack([z1, z2])
             amnesic_z = amnesic_z.flatten()
             amnesic_inputs.append(amnesic_z)
