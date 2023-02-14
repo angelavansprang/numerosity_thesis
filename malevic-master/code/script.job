@@ -43,6 +43,8 @@ source activate thesis
 
 # srun python -u amnesic_probing.py --dataset "pos" --amnesic_objective "color" --layer 1 
 # srun python -u train_probe_twopatches.py --objective "binding_problem" --dataset "pos" --modelname "linear_layer" --padding_up_to 30 --amnesic_obj "color"
-srun python -u train_probe_twopatches.py --objective "binding_problem" --dataset "pos" --modelname "linear_layer" --padding_up_to 30 --amnesic_obj "shape"
+# srun python -u train_probe_twopatches.py --objective "binding_problem" --dataset "pos" --modelname "linear_layer" --padding_up_to 30 --amnesic_obj "shape"
 
 # srun python -u lol.py
+
+srun python -u train_probe.py --objective "shape" --dataset "pos" --modelname "linear_layer" --padding_up_to 30 --single_patch --amnesic_obj "shape"

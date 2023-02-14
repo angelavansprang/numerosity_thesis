@@ -518,6 +518,7 @@ def build_dataloader_patchbased(
     balanced=True,
     batch_size=10,
     threshold=30,
+    amnesic_obj=None,
 ):
     """Return dataloaders with the (visual) CLIP representations of one patch as data and the objective as label.
 
@@ -591,6 +592,20 @@ def build_dataloader_patchbased(
                     label = label2class[label]
                 inputs.append(patch)
                 targets.append(label)
+
+    if amnesic_obj is not None:
+        amnesic_inputs = []
+        P = utils_amnesic_probing.open_intersection_nullspaces(dataset, amnesic_obj, layer)
+        P = torch.from_numpy(P)
+        for z in inputs:
+            z = torch.from_numpy(z)
+            z = torch.unsqueeze(z, 0)
+            z = z.to(torch.float32)
+            P = P.to(torch.float32)
+            z = z @ P
+            amnesic_z = z.flatten()
+            amnesic_inputs.append(amnesic_z)
+        inputs = amnesic_inputs
 
     dataset_train = list(zip(inputs, targets))
     print("len dataset: ", len(dataset_train))
@@ -840,54 +855,12 @@ def build_dataloader_twopatches(
 
 
 if __name__ == "__main__":
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, preprocess = get_model_preprocess(device, model_type="ViT-B/32")
+    # device = "cuda" if torch.cuda.is_available() else "cpu"
+    # model, preprocess = get_model_preprocess(device, model_type="ViT-B/32")
 
-    labels_train = make_labels_dict(dataset="pos", split="train")
-    labels_val = make_labels_dict(dataset="pos", split="val")
-    labels_test = make_labels_dict(dataset="pos", split="test")
-    count_train = get_freqs_labels(labels_train, "n_colors")
-    count_val = get_freqs_labels(labels_val, "n_colors")
-    count_test = get_freqs_labels(labels_test, "n_colors")
-    print("train: ", count_train)
-    print("val: ", count_val)
-    print("test: ", count_test)
+    majority = {}
+    for layer in range(15):
+        targets = build_dataloader_twopatches("pos", layer, split="test")
+        majority[layer] = targets.count(True)/len(targets)
 
-    balanced_labels, _ = make_balanced_data(labels_train, objective="n_colors")
-    print("len balanced labels train: ", len(balanced_labels))
-    balanced_labels, _ = make_balanced_data(labels_val, objective="n_colors")
-    print("len balanced labels val: ", len(balanced_labels))
-    balanced_labels, _ = make_balanced_data(labels_test, objective="n_colors")
-    print("len balanced labels test: ", len(balanced_labels))
-
-    # img_filename = "0.png"
-    # dataset = "sup1"
-    # split = "test"
-    # img_path = f"../data/{dataset}/images/{split}/{img_filename}"
-    # reprs = get_repr(img_path, device, model, preprocess)
-    # print(len(reprs), reprs[0].size())
-    # nodes = transformer_patches.get_all_patches_with_objects(
-    #     img_filename, dataset, split
-    # )
-    # print("nodes: ", nodes)
-    # print("amount of nodes: ", len(nodes))
-    # filt_repr = filter_repr(0, nodes, reprs, single_patch=True)
-    # print("len filt_repr: ", len(filt_repr))
-    # print("filt_repr[0]: ", filt_repr[0])
-    # print("filt_repr[0].shape: ", filt_repr[0].shape)
-
-    # img_filename = "1.png"
-    # dataset = "sup1"
-    # split = "test"
-    # img_path = f"../data/{dataset}/images/{split}/{img_filename}"
-    # reprs = get_repr(img_path, device, model, preprocess)
-    # print(len(reprs), reprs[8].size())
-    # nodes = transformer_patches.get_all_patches_with_objects(
-    #     img_filename, dataset, split
-    # )
-    # print("nodes: ", nodes)
-    # print("amount of nodes: ", len(nodes))
-    # filt_repr = filter_repr(8, nodes, reprs, single_patch=True)
-    # print("len filt_repr: ", len(filt_repr))
-    # print("filt_repr[0]: ", filt_repr[0])
-    # print("filt_repr[0].shape: ", filt_repr[0].shape)
+    print(majority)
