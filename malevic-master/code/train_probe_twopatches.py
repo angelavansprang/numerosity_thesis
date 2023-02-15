@@ -38,6 +38,7 @@ def experiment_per_layer(
     padding_up_to=None,
     single_patch=False,
     amnesic_obj=None,
+    first_projection_only=False,
 ):
     """#TODO: think about and change the option to save the trained models. This can be helpful
     for testing, but then you should also store the trainers? maybe just save them as pickle files?
@@ -61,6 +62,7 @@ def experiment_per_layer(
             split="train",
             threshold=padding_up_to,
             amnesic_obj=amnesic_obj,
+            first_projection_only=first_projection_only,
         )
         loader_val = utils.build_dataloader_twopatches(
             dataset,
@@ -68,6 +70,7 @@ def experiment_per_layer(
             split="val",
             threshold=padding_up_to,
             amnesic_obj=amnesic_obj,
+            first_projection_only=first_projection_only,
         )
         loader_test = utils.build_dataloader_twopatches(
             dataset,
@@ -75,6 +78,7 @@ def experiment_per_layer(
             split="test",
             threshold=padding_up_to,
             amnesic_obj=amnesic_obj,
+            first_projection_only=first_projection_only,
         )
 
         for i in range(5):
@@ -90,14 +94,13 @@ def experiment_per_layer(
 
             results[layer].append(performance[0]["acc"])
             if save_models:
-                save_models_path = f'../models/{modelname}_layer{layer}_{i}_{dataset}_{objective}_{"balanced" if balanced else "unbalanced"}_{"filtered" if filter else "unfiltered"}{"_single_patch" if single_patch else ""}_{"layernorm" if layernorm else "no_layernorm"}{"_amnesic" + str({args.amnesic_obj}) if args.amnesic_obj is not None else ""}.pt'
+                save_models_path = f'../models/{modelname}_layer{layer}_{i}_{dataset}_{objective}_{"balanced" if balanced else "unbalanced"}_{"filtered" if filter else "unfiltered"}{"_single_patch" if single_patch else ""}_{"layernorm" if layernorm else "no_layernorm"}{"_amnesic" + str({args.amnesic_obj}) if args.amnesic_obj is not None else ""}{"_firstprojectiononly" if first_projection_only else ""}.pt'
                 torch.save(model.state_dict(), save_models_path)
 
     return results
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description="Train a probe on representations ViT")
     parser.add_argument("--dataset", choices=["sup1", "pos"], required=True)
     parser.add_argument(
@@ -112,6 +115,7 @@ if __name__ == "__main__":
     parser.add_argument("--padding_up_to", type=int, default=None)
     parser.add_argument("--single_patch", action="store_true")
     parser.add_argument("--amnesic_obj", choices=["shape", "color"])
+    parser.add_argument("--first_projection_only", action="store_true")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -126,6 +130,7 @@ if __name__ == "__main__":
         padding_up_to=args.padding_up_to,
         single_patch=args.single_patch,
         amnesic_obj=args.amnesic_obj,
+        first_projection_only=args.first_projection_only,
     )
 
     results_path = "../results/"
@@ -133,7 +138,7 @@ if __name__ == "__main__":
     results_tosave = dict(results)
     with open(
         results_path
-        + f'test_results_{args.modelname}_{args.dataset}_{args.objective}_{"balanced" if args.balanced else "unbalanced"}_{"filtered_" + str({args.padding_up_to}) if args.padding_up_to is not None else "unfiltered"}{"_single_patch" if args.single_patch else ""}_{"layernorm" if args.layernorm else "no_layernorm"}{"_amnesic" + str({args.amnesic_obj}) if args.amnesic_obj is not None else ""}.pickle',
+        + f'test_results_{args.modelname}_{args.dataset}_{args.objective}_{"balanced" if args.balanced else "unbalanced"}_{"filtered_" + str({args.padding_up_to}) if args.padding_up_to is not None else "unfiltered"}{"_single_patch" if args.single_patch else ""}_{"layernorm" if args.layernorm else "no_layernorm"}{"_amnesic" + str({args.amnesic_obj}) if args.amnesic_obj is not None else ""}{"_firstprojectiononly" if args.first_projection_only else ""}.pickle',
         "wb",
     ) as f:
         pickle.dump(results_tosave, f)

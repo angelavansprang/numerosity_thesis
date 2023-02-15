@@ -595,7 +595,9 @@ def build_dataloader_patchbased(
 
     if amnesic_obj is not None:
         amnesic_inputs = []
-        P = utils_amnesic_probing.open_intersection_nullspaces(dataset, amnesic_obj, layer)
+        P = utils_amnesic_probing.open_intersection_nullspaces(
+            dataset, amnesic_obj, layer
+        )
         P = torch.from_numpy(P)
         for z in inputs:
             z = torch.from_numpy(z)
@@ -611,13 +613,9 @@ def build_dataloader_patchbased(
     print("len dataset: ", len(dataset_train))
 
     if split == "train":
-        dataloader = DataLoader(
-            dataset_train, batch_size=batch_size, shuffle=True, num_workers=72
-        )
+        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
     else:
-        dataloader = DataLoader(
-            dataset_train, batch_size=batch_size, shuffle=False, num_workers=72
-        )
+        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=False)
 
     return dataloader, class2label
 
@@ -738,6 +736,7 @@ def build_dataloader_twopatches(
     batch_size=10,
     threshold=30,
     amnesic_obj=None,
+    first_projection_only=False,
 ):
     """Return dataloaders with the (visual) CLIP representations of one patch as data and the objective as label.
 
@@ -789,7 +788,6 @@ def build_dataloader_twopatches(
         nodes = patches.keys()
 
         if len(nodes) <= threshold:
-
             if split == "train" or split == "val":
                 # find 3 repr patch duo's: hard positives, hard negatives, random
                 patch1, patch2, label = find_hard_positives_twopatches(patches)
@@ -820,9 +818,14 @@ def build_dataloader_twopatches(
 
     if amnesic_obj is not None:  # TODO: Check if this works
         amnesic_inputs = []
-        P = utils_amnesic_probing.open_intersection_nullspaces(
-            dataset, amnesic_obj, layer
-        )
+        if first_projection_only:
+            P = utils_amnesic_probing.open_first_rowspace_projection(
+                dataset, amnesic_obj, layer
+            )
+        else:
+            P = utils_amnesic_probing.open_intersection_nullspaces(
+                dataset, amnesic_obj, layer
+            )
         P = torch.from_numpy(P)
         for z in inputs:
             z1 = z[:768]
@@ -843,13 +846,9 @@ def build_dataloader_twopatches(
     print("len dataset: ", len(dataset_train))
 
     if split == "train":
-        dataloader = DataLoader(
-            dataset_train, batch_size=batch_size, shuffle=True, num_workers=72
-        )
+        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
     else:
-        dataloader = DataLoader(
-            dataset_train, batch_size=batch_size, shuffle=False, num_workers=72
-        )
+        dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=False)
 
     return dataloader
 
@@ -861,6 +860,6 @@ if __name__ == "__main__":
     majority = {}
     for layer in range(15):
         targets = build_dataloader_twopatches("pos", layer, split="test")
-        majority[layer] = targets.count(True)/len(targets)
+        majority[layer] = targets.count(True) / len(targets)
 
     print(majority)

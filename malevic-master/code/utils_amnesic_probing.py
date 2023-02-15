@@ -180,3 +180,12 @@ def debias_by_specific_directions(directions: list[np.ndarray], input_dim: int):
     P = get_projection_to_intersection_of_nullspaces(rowspace_projections, input_dim)
 
     return P
+
+
+def open_first_rowspace_projection(dataset, objective, layer):
+    path = f"../data/{dataset}/representations/"
+    file_name = f"rowspace_projections_{objective}_layer{layer}.pickle"
+    with open(path + file_name, "rb") as f:
+        rowspace_projections = pickle.load(f)
+    first_rowspace_projection = rowspace_projections[0]
+    return first_rowspace_projection

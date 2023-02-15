@@ -32,14 +32,14 @@ def open_results(filename):
 
 def plot_accuracy_probes(config):
     """input:
-    config (dict): contains the keys, "filenames", "labels", "info_fig", "save", "only_transformer"
+    config (dict): contains the keys, "filenames", "labels", "fig_title", "save", "only_transformer"
     """
     results = []
     xs = []
     ys = []
     yerrors = []
     N_probes = len(config["filenames"])
-    info_fig = config["info_fig"]
+    fig_title = config["fig_title"]
 
     for name in config["filenames"]:
         results.append(open_results(name))
@@ -68,11 +68,12 @@ def plot_accuracy_probes(config):
                 ys[i],
                 yerrors[i],
                 linestyle="--",
-                marker="o",
+                marker=marker,
                 label=config["labels"][i],
+                color=color,
             )
         plt.xticks(range(17), labels=layer2name.values(), rotation=45)
-        plt.suptitle(f"Accuracy probes from representations {info_fig}")
+        plt.suptitle(fig_title)
     else:
         labels = [label.replace(" - transformer", "") for label in layer2name.values()]
         for i in range(N_probes):
@@ -85,13 +86,10 @@ def plot_accuracy_probes(config):
                 label=config["labels"][i],
             )
         plt.xticks(x[3:15], labels=labels[3:15])
-        plt.suptitle(
-            f"Accuracy probes from representations transformer only {info_fig}"
-        )
+        plt.suptitle(f"{fig_title} - transformer only")
     ax.legend()
 
     if config["entire_y_axis"]:
-        print("Yeah i'm trying")
         plt.ylim([0, 1.0])
 
     if config["save"]:
@@ -148,24 +146,29 @@ def plot_accuracy_probes(config):
 
 
 if __name__ == "__main__":
-
     config = {
-        "no_plots": 2,
+        "no_plots": 5,
         "filenames": [
-            "../results/test_results_linear_layer_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
-            # "../results/test_results_linear_layer_pos_color_unbalanced_filtered_{30}_single_patch_no_layernorm.pickle",
-            # "../results/test_results_linear_layer_pos_shape_unbalanced_filtered_{30}_single_patch_no_layernorm.pickle",
-            # "../results/test_results_linear_layer_pos_n_colors_balanced_filtered_{30}_single_patch_no_layernorm.pickle",
-            # "../results/test_results_linear_layer_pos_n_objects_balanced_filtered_{30}_single_patch_no_layernorm.pickle",
-            "../results/test_results_linear_layer_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'shape'}.pickle",
-            "../results/test_results_linear_layer_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'color'}.pickle",
+            # "../results/test_results_linear_layer_pos_color_unbalanced_filtered_{30}_single_patch_no_layernorm_amnesiccolor.pickle",
+            # "../results/test_results_linear_layer_pos_shape_unbalanced_filtered_{30}_single_patch_no_layernorm_amnesicshape.pickle",
+            "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
+            "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'color'}.pickle",
+            "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'shape'}.pickle",
+            "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'color'}_firstprojectiononly.pickle",
+            "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'shape'}_firstprojectiononly.pickle",
         ],
-        "labels": ["original", "no shape", "no color"],
+        "labels": [
+            "original",
+            "no color",
+            "no shape",
+            "no color (1 iter)",
+            "no shape (1 iter)",
+        ],
         # "labels": ["MLP (sup1)"],
-        "info_fig": "(binding problem, linear layer, pos)",
+        "fig_title": "Binding problem MLP",
         "save": False,
         "only_transformer": False,
-        "entire_y_axis": True,
+        "entire_y_axis": False,
     }
 
     results = plot_accuracy_probes(config)

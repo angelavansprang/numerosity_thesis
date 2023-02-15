@@ -18,12 +18,18 @@ def experiment_per_layer(
     save_models=False,
     padding_up_to=None,
     single_patch=False,
-    amnesic_obj=None,   
+    amnesic_obj=None,
+    single_experiment=False,
 ):
     """#TODO: think about and change the option to save the trained models. This can be helpful
     for testing, but then you should also store the trainers? maybe just save them as pickle files?
     Then, need to include the path as argument?
     """
+    if single_experiment:
+        n_runs = 1
+    else:
+        n_runs = 5
+
     if objective == "n_colors":
         D_out = 4
         # D_out = 5
@@ -78,7 +84,7 @@ def experiment_per_layer(
                 split="train",
                 balanced=balanced,
                 threshold=padding_up_to,
-                amnesic_obj=amnesic_obj
+                amnesic_obj=amnesic_obj,
             )
             loader_val, class2label = utils.build_dataloader_patchbased(
                 dataset,
@@ -87,7 +93,7 @@ def experiment_per_layer(
                 split="val",
                 balanced=balanced,
                 threshold=padding_up_to,
-                amnesic_obj=amnesic_obj
+                amnesic_obj=amnesic_obj,
             )
             loader_test, class2label = utils.build_dataloader_patchbased(
                 dataset,
@@ -96,10 +102,10 @@ def experiment_per_layer(
                 split="test",
                 balanced=balanced,
                 threshold=padding_up_to,
-                amnesic_obj=amnesic_obj
+                amnesic_obj=amnesic_obj,
             )
 
-        for i in range(5):
+        for i in range(n_runs):
             print("D_in: ", D_in)
             print("D_out: ", D_out)
             for batch, labels in loader_train:
@@ -125,7 +131,6 @@ def experiment_per_layer(
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description="Train a probe on representations ViT")
     parser.add_argument("--dataset", choices=["sup1", "pos"], required=True)
     parser.add_argument(
@@ -140,6 +145,7 @@ if __name__ == "__main__":
     parser.add_argument("--padding_up_to", type=int, default=None)
     parser.add_argument("--single_patch", action="store_true")
     parser.add_argument("--amnesic_obj", choices=["shape", "color"], default=None)
+    parser.add_argument("--single_experiment", action="store_true")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -154,6 +160,7 @@ if __name__ == "__main__":
         padding_up_to=args.padding_up_to,
         single_patch=args.single_patch,
         amnesic_obj=args.amnesic_obj,
+        single_experiment=args.single_experiment,
     )
 
     results_path = "../results/"
