@@ -858,8 +858,9 @@ if __name__ == "__main__":
     # model, preprocess = get_model_preprocess(device, model_type="ViT-B/32")
 
     majority = {}
-    for layer in range(15):
-        targets = build_dataloader_twopatches("pos", layer, split="test")
-        majority[layer] = targets.count(True) / len(targets)
+    layer = 0
+    # for layer in range(15):
+    targets = build_dataloader_twopatches("pos", layer, split="test")
+    majority[layer] = targets.count(True) / len(targets)
 
     print(majority)
