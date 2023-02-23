@@ -11,12 +11,12 @@ import os
 import pickle
 from torch.utils.data import DataLoader
 
-import models
-import transformer_patches
-import utils_amnesic_probing
+# import models
+# import transformer_patches
+# import utils_amnesic_probing
 
 sys.path.append("../../")
-import Transformer_MM_Explainability.CLIP.clip as clip
+# import Transformer_MM_Explainability.CLIP.clip as clip
 
 # GLOBAL VARIABLES
 global_path = ".."
@@ -581,7 +581,7 @@ def build_dataloader_patchbased(
                     patch_id
                 ]  # one patch could contain multiple object boxes, but skip these because label uncertain
                 if len(boxes) > 1:
-                    break
+                    continue  # TODO: should this not be a continue statement?!!
                 box = boxes[0]
                 # print(box)
                 # print(box[objective])

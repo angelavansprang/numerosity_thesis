@@ -6,7 +6,8 @@ import torch
 import numpy as np
 import tqdm
 import scipy
-import utils
+
+# import utils
 import pickle
 from torch.utils.data import DataLoader
 
@@ -80,7 +81,7 @@ def get_data_patchbased(
                     patch_id
                 ]  # one patch could contain multiple object boxes, but skip these because label uncertain
                 if len(boxes) > 1:
-                    break
+                    continue
                 box = boxes[0]
                 # print(box)
                 # print(box[objective])
@@ -139,6 +140,7 @@ def get_rowspace_projection(W: np.ndarray) -> np.ndarray:
         w_basis = scipy.linalg.orth(W.T)  # orthogonal basis
 
     w_basis * np.sign(w_basis[0][0])  # handle sign ambiguity
+    # w_basis = w_basis * np.sign(w_basis[0][0])  # handle sign ambiguity
     P_W = w_basis.dot(w_basis.T)  # orthogonal projection on W's rowspace
 
     return P_W
@@ -188,4 +190,7 @@ def open_first_rowspace_projection(dataset, objective, layer):
     with open(path + file_name, "rb") as f:
         rowspace_projections = pickle.load(f)
     first_rowspace_projection = rowspace_projections[0]
+    first_rowspace_projection = get_projection_to_intersection_of_nullspaces(
+        [rowspace_projections[0]], input_dim=768
+    )
     return first_rowspace_projection
