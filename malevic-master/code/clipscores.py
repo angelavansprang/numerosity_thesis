@@ -7,12 +7,12 @@ import pickle
 import visualize_result
 import numpy as np
 
-# import utils
-# import utils_amnesic_probing
+import utils
+import utils_amnesic_probing
 import matplotlib.pyplot as plt
 
 sys.path.append("../../")
-# import Transformer_MM_Explainability.CLIP.clip as clip
+import Transformer_MM_Explainability.CLIP.clip as clip
 
 
 # def get_clipscore(model, preprocess, texts, img_repr, from_step):
@@ -260,55 +260,55 @@ def visualize_results(dataset, split, first_projection_only, to_save=False):
 
 
 if __name__ == "__main__":
-    # device = "cuda" if torch.cuda.is_available() else "cpu"
-    # model, preprocess = utils.get_model_preprocess(device, model_type="ViT-B/32")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model, preprocess = utils.get_model_preprocess(device, model_type="ViT-B/32")
 
-    # parser = argparse.ArgumentParser(
-    #     description="Get CLIP scores of texts and (amnesic) images"
-    # )
-    # parser.add_argument("--dataset", choices=["sup1", "pos"], required=True)
-    # parser.add_argument(
-    #     "--split",
-    #     choices=["train", "test", "val"],
-    #     required=True,
-    # )
-    # parser.add_argument("--amnesic_obj", choices=["shape", "color"], default=None)
-    # parser.add_argument("--to_save", action="store_true")
-    # parser.add_argument("--first_projection_only", action="store_true")
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser(
+        description="Get CLIP scores of texts and (amnesic) images"
+    )
+    parser.add_argument("--dataset", choices=["sup1", "pos"], required=True)
+    parser.add_argument(
+        "--split",
+        choices=["train", "test", "val"],
+        required=True,
+    )
+    parser.add_argument("--amnesic_obj", choices=["shape", "color"], default=None)
+    parser.add_argument("--to_save", action="store_true")
+    parser.add_argument("--first_projection_only", action="store_true")
+    args = parser.parse_args()
 
-    # print("Started with experiment")
-    # results = experiment_per_layer(
-    #     dataset=args.dataset,
-    #     split=args.split,
-    #     amnesic_obj=args.amnesic_obj,
-    #     to_save=args.to_save,
-    #     first_projection_only=args.first_projection_only,
-    # )
-    # print(
-    #     f"Results {args.dataset}, {args.split}, {args.amnesic_obj}, {args.first_projection_only}: "
-    # )
-    # for layer, outcomes in results.items():
-    #     print(f"    Accuracy layer {layer}: {sum(outcomes)/len(outcomes)}")
+    print("Started with experiment")
+    results = experiment_per_layer(
+        dataset=args.dataset,
+        split=args.split,
+        amnesic_obj=args.amnesic_obj,
+        to_save=args.to_save,
+        first_projection_only=args.first_projection_only,
+    )
+    print(
+        f"Results {args.dataset}, {args.split}, {args.amnesic_obj}, {args.first_projection_only}: "
+    )
+    for layer, outcomes in results.items():
+        print(f"    Accuracy layer {layer}: {sum(outcomes)/len(outcomes)}")
 
+    visualize_results(
+        dataset=args.dataset,
+        split=args.split,
+        first_projection_only=args.first_projection_only,
+        to_save=True,
+    )
     # visualize_results(
-    #     dataset=args.dataset,
-    #     split=args.split,
-    #     first_projection_only=args.first_projection_only,
+    #     dataset="pos",
+    #     split="train",
+    #     first_projection_only=True,
     #     to_save=True,
     # )
-    visualize_results(
-        dataset="pos",
-        split="train",
-        first_projection_only=True,
-        to_save=True,
-    )
-    visualize_results(
-        dataset="pos",
-        split="train",
-        first_projection_only=False,
-        to_save=True,
-    )
+    # visualize_results(
+    #     dataset="pos",
+    #     split="train",
+    #     first_projection_only=False,
+    #     to_save=True,
+    # )
 
 
 # def compute_cos_sim_imgandtext(img_path, text_prompt, to_print=False):

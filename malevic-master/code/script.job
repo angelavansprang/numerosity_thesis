@@ -2,9 +2,9 @@
 
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
-#SBATCH --job-name=orig_clipscores
+#SBATCH --job-name=bpmlp
 #SBATCH --nodes=1
-#SBATCH --time=05:00:00
+#SBATCH --time=10:00:00
 #SBATCH --output=job_logs/slurm_output_%A.out
 
 module purge
@@ -29,14 +29,14 @@ source activate thesis
 # srun python -u train_probe_twopatches.py --objective "binding_problem" --dataset "pos" --modelname "MLP2" --padding_up_to 30 --amnesic_obj "color" &
 # srun python -u train_probe_twopatches.py --objective "binding_problem" --dataset "pos" --modelname "MLP2" --padding_up_to 30 --amnesic_obj "shape" &
 
-# srun python -u train_probe_twopatches.py --objective "binding_problem" --dataset "pos" --modelname "MLP2" --padding_up_to 30 --amnesic_obj "color" --first_projection_only &
-# srun python -u train_probe_twopatches.py --objective "binding_problem" --dataset "pos" --modelname "MLP2" --padding_up_to 30 --amnesic_obj "shape" --first_projection_only &
-# wait
+srun python -u train_probe_twopatches.py --objective "binding_problem" --dataset "pos" --modelname "MLP2" --padding_up_to 30 --amnesic_obj "color" --first_projection_only &
+srun python -u train_probe_twopatches.py --objective "binding_problem" --dataset "pos" --modelname "MLP2" --padding_up_to 30 --amnesic_obj "shape" --first_projection_only &
+wait
 
 # srun python -u clipscores.py --dataset="pos" --split="train" --to_save --first_projection_only
 # srun python -u clipscores.py --dataset="pos" --split="train" --amnesic_obj="shape" --to_save --first_projection_only
 # srun python -u clipscores.py --dataset="pos" --split="train" --amnesic_obj="color" --to_save --first_projection_only
 
-srun python -u clipscores.py --dataset="pos" --split="train" --to_save
+# srun python -u clipscores.py --dataset="pos" --split="train" --to_save
 # srun python -u clipscores.py --dataset="pos" --split="train" --amnesic_obj="shape" --to_save
 # srun python -u clipscores.py --dataset="pos" --split="train" --amnesic_obj="color" --to_save

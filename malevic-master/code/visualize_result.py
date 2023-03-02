@@ -62,14 +62,15 @@ def plot_accuracy_probes(config):
         yerrors.append(yerr)
 
     if not config["only_transformer"]:
-        color = ["blue", "orange"]
+        color = ["blue", "orange", "green", "orange", "green"]
+        marker = ["o", "o", "o", "x", "x"]
         for i in range(N_probes):
             ax.errorbar(
                 xs[i],
                 ys[i],
                 yerrors[i],
                 linestyle="--",
-                marker="o",
+                marker=marker[i],
                 label=config["labels"][i],
                 color=color[i],
             )
@@ -89,8 +90,8 @@ def plot_accuracy_probes(config):
         plt.xticks(x[3:15], labels=labels[3:15])
         plt.suptitle(f"{fig_title} - transformer only")
 
-    plt.axhline(y=0.25, color="orange", linestyle="--")
-    plt.axhline(y=0.2, color="blue", linestyle="--")
+    # plt.axhline(y=0.25, color="orange", linestyle="--")
+    # plt.axhline(y=0.2, color="blue", linestyle="--")
     ax.legend()
 
     if config["entire_y_axis"]:
@@ -151,28 +152,28 @@ def plot_accuracy_probes(config):
 
 if __name__ == "__main__":
     config = {
-        "no_plots": 2,
+        "no_plots": 5,
         "filenames": [
-            "../results/test_results_MLP2_pos_color_unbalanced_filtered_{30}_single_patch_no_layernorm_amnesiccolor.pickle",
-            "../results/test_results_MLP2_pos_shape_unbalanced_filtered_{30}_single_patch_no_layernorm_amnesicshape.pickle",
-            # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
-            # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'color'}.pickle",
-            # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'shape'}.pickle",
-            # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'color'}_firstprojectiononly.pickle",
-            # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'shape'}_firstprojectiononly.pickle",
+            # "../results/test_results_MLP2_pos_color_unbalanced_filtered_{30}_single_patch_no_layernorm_amnesiccolor.pickle",
+            # "../results/test_results_MLP2_pos_shape_unbalanced_filtered_{30}_single_patch_no_layernorm_amnesicshape.pickle",
+            "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
+            "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'color'}.pickle",
+            "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'shape'}.pickle",
+            "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'color'}_firstprojectiononly.pickle",
+            "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'shape'}_firstprojectiononly.pickle",
         ],
         "labels": [
-            "no color",
-            "no shape",
-            # "original",
             # "no color",
             # "no shape",
-            # "no color (1 iter)",
-            # "no shape (1 iter)",
+            "original",
+            "no color",
+            "no shape",
+            "no color (1 iter)",
+            "no shape (1 iter)",
         ],
         # "labels": ["MLP (sup1)"],
-        "fig_title": "Performance non-linear probes amnesic data",
-        "save": True,
+        "fig_title": "Binding problem MLP",
+        "save": False,
         "only_transformer": False,
         "entire_y_axis": False,
     }
