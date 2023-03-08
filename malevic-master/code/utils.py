@@ -11,12 +11,12 @@ import os
 import pickle
 from torch.utils.data import DataLoader
 
-import models
-import transformer_patches
-import utils_amnesic_probing
+# import models
+# import transformer_patches
+# import utils_amnesic_probing
 
 sys.path.append("../../")
-import Transformer_MM_Explainability.CLIP.clip as clip
+# import Transformer_MM_Explainability.CLIP.clip as clip
 
 # GLOBAL VARIABLES
 global_path = ".."
