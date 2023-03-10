@@ -1,6 +1,7 @@
 # ┌─────────────────────────────┐
 # │ attempt for amnesic probing │
 # └─────────────────────────────┘
+# Use this file to obtain the projections for (linear) amnesic probing
 
 import utils
 import models
@@ -10,6 +11,8 @@ import numpy as np
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import pickle
 import argparse
+import run_kernels
+from collections import defaultdict
 
 
 def get_debiasing_projection(
@@ -146,15 +149,20 @@ def get_debiasing_projection(
     return P, rowspace_projections, Ws, all_projections, best_projection
 
 
-def train_classifier(D_in, D_out, loader_train, loader_val, loader_test):
-    classifier = models.ProbingHead(
-        D_in=D_in, D_out=D_out
-    )  # this is a linear classifier
+def train_classifier(D_in, D_out, loader_train, loader_val, loader_test, probe_type="lin"):
+    if probe_type == "lin":
+        classifier = models.ProbingHead(
+            D_in=D_in, D_out=D_out
+        )  # this is a linear classifier
+    elif probe_type == "MLP":
+        classifier = models.MLP2(input_size=D_in, output_size=D_out)
 
     # 3. Train a linear classifier to predict Z (the property to remove)
 
+    print(classifier)
+
     trainer = pl.Trainer(
-        accelerator="gpu",
+        # accelerator="gpu",
         callbacks=[EarlyStopping(monitor="val_loss", mode="min")],
         enable_progress_bar=False,
         log_every_n_steps=100,
@@ -162,56 +170,6 @@ def train_classifier(D_in, D_out, loader_train, loader_val, loader_test):
     train_info = trainer.fit(classifier, loader_train, loader_val)
     performance = trainer.test(dataloaders=loader_test)
     return performance[0]["acc"], classifier
-
-
-def check_projections_ViT(dataset, objective, balanced, threshold=30, D_in=768):
-    """
-    Perform projection P in all layers of the ViT, and train a classifier on the objective to check whether the projection worked
-    """
-    if objective == "color":
-        D_out = 5
-    elif objective == "shape":
-        D_out = 4
-
-    results = {}
-
-    for layer in range(15):  # There are 14 layers with patches
-        (
-            X_train,
-            y_train,
-            X_val,
-            y_val,
-            X_test,
-            y_test,
-            class2label,
-        ) = get_alldata_perlayer(dataset, layer, objective, balanced, threshold)
-
-        X_train = np.asarray(X_train)
-        X_val = np.asarray(X_val)
-        X_test = np.asarray(X_test)
-
-        P = utils_amnesic_probing.open_intersection_nullspaces(
-            dataset, objective, layer
-        )
-
-        # project
-        X_train = X_train.dot(P)
-        X_val = X_val.dot(P)
-
-        loader_train = utils_amnesic_probing.build_dataloader(
-            X_train, y_train, "train", batch_size
-        )
-        loader_val = utils_amnesic_probing.build_dataloader(
-            X_val, y_val, "val", batch_size
-        )
-        loader_test = utils_amnesic_probing.build_dataloader(
-            X_test, y_test, "test", batch_size
-        )
-
-        acc = train_classifier(D_in, D_out, loader_train, loader_val, loader_test)
-        results[layer] = acc
-
-    return results
 
 
 def get_alldata_perlayer(dataset, layer, objective, balanced, threshold=30):
@@ -243,7 +201,6 @@ def get_alldata_perlayer(dataset, layer, objective, balanced, threshold=30):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description="Perform amnesic probing on representations ViT"
     )
@@ -255,12 +212,17 @@ if __name__ == "__main__":
     )
     parser.add_argument("--balanced", action="store_true")
     parser.add_argument("--layer", type=int, required=True)
+    parser.add_argument("--kernelize", action="store_true")
     args = parser.parse_args()
 
     batch_size = 10
     num_classifiers = 100
     threshold = 30
-    D_in = 768
+
+    import torch
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(device)
 
     filename = {
         "objective": args.amnesic_objective,
@@ -269,25 +231,29 @@ if __name__ == "__main__":
         "balanced": args.balanced,
     }
 
-    results = check_projections_ViT(
-        args.dataset, args.amnesic_objective, balanced=False, threshold=30, D_in=768
-    )
-    print(results)
-
-    # (
-    #     P,
-    #     rowspace_projections,
-    #     Ws,
-    #     all_projections,
-    #     best_projection,
-    # ) = get_debiasing_projection(
-    #     num_classifiers,
+    # outcomes = check_projections_ViT(
     #     args.dataset,
-    #     args.layer,
     #     args.amnesic_objective,
-    #     args.balanced,
-    #     threshold,
-    #     D_in=768,
-    #     to_save=True,
-    #     filename=filename,
+    #     balanced=False,
+    #     threshold=threshold,
+    #     kernelize=args.kernelize,
     # )
+    # print(dict(outcomes))
+
+    (
+        P,
+        rowspace_projections,
+        Ws,
+        all_projections,
+        best_projection,
+    ) = get_debiasing_projection(
+        num_classifiers,
+        args.dataset,
+        args.layer,
+        args.amnesic_objective,
+        args.balanced,
+        threshold,
+        D_in=768,
+        to_save=True,
+        filename=filename,
+    )

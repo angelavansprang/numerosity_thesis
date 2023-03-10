@@ -17,6 +17,10 @@
 !/malevic-master/code/lollol.job
 !/malevic-master/code/script.job
 !/malevic-master/code/clipscores.py
+!/malevic-master/code/eval_kernels.py
+!/malevic-master/code/run_kernels.py
+!/malevic-master/code/relaxed_inlp.py
+!/malevic-master/code/train_amnprobe.py
 !/malevic-master/results
 !/malevic-master/plots
 
