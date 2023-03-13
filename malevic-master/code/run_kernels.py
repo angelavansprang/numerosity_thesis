@@ -792,9 +792,7 @@ if __name__ == "__main__":
                             W = U[-RANK:]
                             P = np.eye(X_kernel.shape[1]) - W.T @ W
                             with open(
-                                "../kernel_removal/{}/layer{}/{}/P.{}.pickle".format(
-                                    kernel_type, args.layer, params_str, params_str
-                                ),
+                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/P.{params_str}.pickle",
                                 "wb",
                             ) as f:
                                 pickle.dump(P, f)
@@ -920,29 +918,30 @@ if __name__ == "__main__":
                                     )
                                     # Z_dev = calc_preimage_nystrom_mse(X_dev,X_dev_kernel_proj,X1,S,kernels[kernel_type]["torch"], gamma, degree, alpha,P)
 
-                                    with open(
-                                        f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/preimage/Z_val.{params_str}.pickle",
-                                        "wb",
-                                    ) as f:
-                                        pickle.dump(
-                                            (
-                                                Z_dev,
-                                                error,
-                                                mean_norm_normalized,
-                                                best_score,
-                                            ),
-                                            f,
-                                        )
-                                    with open(
-                                        f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/preimage/Z_test.{params_str}.pickle",
-                                        "wb",
-                                    ) as f:
-                                        pickle.dump(
-                                            (
-                                                Z_test,
-                                                error,
-                                                mean_norm_normalized,
-                                                best_score,
-                                            ),
-                                            f,
-                                        )
+                                with open(
+                                    f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/preimage/Z_val.{params_str}.pickle",
+                                    "wb",
+                                ) as f:
+                                    pickle.dump(
+                                        (
+                                            Z_dev,
+                                            error,
+                                            mean_norm_normalized,
+                                            best_score,
+                                        ),
+                                        f,
+                                    )
+
+                                with open(
+                                    f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/preimage/Z_test.{params_str}.pickle",
+                                    "wb",
+                                ) as f:
+                                    pickle.dump(
+                                        (
+                                            Z_test,
+                                            error,
+                                            mean_norm_normalized,
+                                            best_score,
+                                        ),
+                                        f,
+                                    )

@@ -162,7 +162,7 @@ def train_classifier(D_in, D_out, loader_train, loader_val, loader_test, probe_t
     print(classifier)
 
     trainer = pl.Trainer(
-        # accelerator="gpu",
+        accelerator="gpu",
         callbacks=[EarlyStopping(monitor="val_loss", mode="min")],
         enable_progress_bar=False,
         log_every_n_steps=100,

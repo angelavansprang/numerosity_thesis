@@ -1,6 +1,6 @@
 # This file should be used to train probes on amnesic data, to check if it worked.
 # Amnesic probing can either be linear of with kernels
-# Similar to the file train_probe.py, but then necessarily amnesic probing
+# Similar to the file train_probe.py, but then only amnesic probing
 
 import amnesic_probing
 import utils
@@ -15,9 +15,13 @@ import run_kernels
 from collections import defaultdict
 
 
-gammas = [0.05, 0.1, 0.15]
-alphas = [0.8, 1, 1.2]
-degrees = [2, 3]
+# # below is the original
+# gammas = [0.05, 0.1, 0.15]
+# alphas = [0.8, 1, 1.2]
+# degrees = [2, 3]
+gammas = [0.1]
+alphas = [1]
+degrees = [2]
 
 kernel2params = {
     "poly": {"gammas": gammas, "degrees": degrees, "alphas": alphas},
@@ -40,9 +44,9 @@ def get_kernelized_data(
         kernel_type, d, str(gamma), str(degree), str(alpha)
     )
 
-    X_train_path = f"../kernel_removal/{kernel_type}/{dataset}/{objective}/layer{layer}/params_str/preimage/Z_train.{params_str}.pickle"
-    X_val_path = f"../kernel_removal/{kernel_type}/{dataset}/{objective}/layer{layer}/params_str/preimage/Z_val.{params_str}.pickle"
-    X_test_path = f"../kernel_removal/{kernel_type}/{dataset}/{objective}/layer{layer}/params_str/preimage/Z_test.{params_str}.pickle"
+    X_train_path = f"../kernel_removal/{kernel_type}/{dataset}/{objective}/layer{layer}/{params_str}/preimage/Z_train.{params_str}.pickle"
+    X_val_path = f"../kernel_removal/{kernel_type}/{dataset}/{objective}/layer{layer}/{params_str}/preimage/Z_val.{params_str}.pickle"
+    X_test_path = f"../kernel_removal/{kernel_type}/{dataset}/{objective}/layer{layer}/{params_str}/preimage/Z_test.{params_str}.pickle"
     # X_train_path = f"../kernel_removal/interim/malevic{run_id}/kernel/projected/X_{dataset}_layer{layer}_{objective}.proj.{params_str}.pickle"
     # X_val_path = f"../kernel_removal/interim/malevic{run_id}/kernel/projected/X_dev_{dataset}_layer{layer}_{objective}.proj.{params_str}.pickle"
     # X_test_path = f"../kernel_removal/interim/malevic{run_id}/kernel/projected/X_test_{dataset}_layer{layer}_{objective}.proj.{params_str}.pickle"
@@ -74,7 +78,8 @@ def check_projections_ViT(
     elif objective == "shape":
         D_out = 4
 
-    for layer in range(15):  # There are 14 layers with patches
+    #TODO: remove 13 again
+    for layer in range(13, 15):  # There are 14 layers with patches
         print(f"Start with layer {layer}")
         if not kernelize:  # perform amnesic probing linearly
             results = {}
@@ -143,10 +148,6 @@ def check_projections_ViT(
                             d=1024,
                         )
 
-                        print("X_train.shape: ", X_train.shape)
-                        print("X_val.shape: ", X_val.shape)
-                        print("X_test.shape: ", X_test.shape)
-
                         loader_train = utils_amnesic_probing.build_dataloader(
                             X_train, y_train, "train", batch_size
                         )
@@ -169,7 +170,6 @@ def check_projections_ViT(
                         )
 
                         results[layer].append(acc)
-        break
 
     return results
 
@@ -185,7 +185,6 @@ if __name__ == "__main__":
         required=True,
     )
     parser.add_argument("--balanced", action="store_true")
-    parser.add_argument("--layer", type=int, required=True)
     parser.add_argument("--kernelize", action="store_true")
     parser.add_argument("--probe_type", choices=["lin", "MLP"], required=True)
     args = parser.parse_args()
@@ -198,13 +197,6 @@ if __name__ == "__main__":
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(device)
-
-    filename = {
-        "objective": args.amnesic_objective,
-        "dataset": args.dataset,
-        "layer": args.layer,
-        "balanced": args.balanced,
-    }
 
     outcomes = check_projections_ViT(
         args.dataset,
@@ -221,7 +213,7 @@ if __name__ == "__main__":
     results_tosave = dict(outcomes)
     with open(
         results_path
-        + f'test_results_amnprbng_{args.probe_type}_{args.dataset}_{args.amnesic_objective}_{"balanced" if args.balanced else "unbalanced"}_{"kernelized" if args.kernelize is not None else "linrmvl"}.pickle',
+        + f'test_results_amnprbng_{"kernelized" if args.kernelize is not None else "linrmvl"}_{args.probe_type}_{args.dataset}_{args.amnesic_objective}.pickle',
         "wb",
     ) as f:
         pickle.dump(results_tosave, f)

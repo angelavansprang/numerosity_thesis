@@ -2,7 +2,7 @@
 
 #SBATCH --partition=gpu
 #SBATCH --gpus=1
-#SBATCH --job-name=run_kernels_all
+#SBATCH --job-name=amnprbn_krnl
 #SBATCH --nodes=1
 #SBATCH --time=10:00:00
 #SBATCH --output=job_logs/slurm_output_%A.out
@@ -21,21 +21,22 @@ cd $HOME/MALeViC/code
 source activate thesis
 
 # Run code
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 0 --kernel_type="poly" &
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 2 --kernel_type="poly" &
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 3 --kernel_type="poly" &
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 4 --kernel_type="poly" &
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 5 --kernel_type="poly" &
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 6 --kernel_type="poly" &
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 7 --kernel_type="poly" &
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 8 --kernel_type="poly" &
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 9 --kernel_type="poly" &
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 10 --kernel_type="poly" &
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 11 --kernel_type="poly" &
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 12 --kernel_type="poly" &
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 13 --kernel_type="poly" &
-srun python run_kernels.py --dataset "pos" --objective "shape" --layer 14 --kernel_type="poly" &
-wait
+# # srun python run_kernels.py --dataset "pos" --objective "shape" --layer 0 --kernel_type="poly" &
+# srun python run_kernels.py --dataset "pos" --objective "shape" --layer 1 --kernel_type="poly" &
+# # srun python run_kernels.py --dataset "pos" --objective "shape" --layer 2 --kernel_type="poly" &
+# srun python run_kernels.py --dataset "pos" --objective "shape" --layer 3 --kernel_type="poly" &
+# srun python run_kernels.py --dataset "pos" --objective "shape" --layer 4 --kernel_type="poly" &
+# srun python run_kernels.py --dataset "pos" --objective "shape" --layer 5 --kernel_type="poly" &
+# srun python run_kernels.py --dataset "pos" --objective "shape" --layer 6 --kernel_type="poly" &
+# srun python run_kernels.py --dataset "pos" --objective "shape" --layer 7 --kernel_type="poly" &
+# # srun python run_kernels.py --dataset "pos" --objective "shape" --layer 8 --kernel_type="poly" &
+# srun python run_kernels.py --dataset "pos" --objective "shape" --layer 9 --kernel_type="poly" &
+# # srun python run_kernels.py --dataset "pos" --objective "shape" --layer 10 --kernel_type="poly" &
+# srun python run_kernels.py --dataset "pos" --objective "shape" --layer 11 --kernel_type="poly" &
+# # srun python run_kernels.py --dataset "pos" --objective "shape" --layer 12 --kernel_type="poly" &
+srun python run_kernels.py --dataset "pos" --objective "shape" --layer 13 --kernel_type="poly"
+# # srun python run_kernels.py --dataset "pos" --objective "shape" --layer 14 --kernel_type="poly" &
+# wait
 
-
-# srun python train_amnprobe.py --dataset "pos" --amnesic_objective "shape" --layer 0 --kernelize --probe_type="lin"
+srun python train_amnprobe.py --dataset "pos" --amnesic_objective "shape" --kernelize --probe_type="lin"
+srun python train_amnprobe.py --dataset "pos" --amnesic_objective "shape" --kernelize --probe_type="MLP"
