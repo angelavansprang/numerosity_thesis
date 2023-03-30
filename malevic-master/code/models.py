@@ -58,7 +58,7 @@ class MLP(pl.LightningModule):
         # NOTE: LAYER NORMALIZATION IS ON
         self.layernorm = layernorm
         self.ln_post = LayerNorm(width)
-        scale = width ** -0.5
+        scale = width**-0.5
         self.proj = nn.Parameter(
             scale * torch.randn(width, output_dim)
         )  # original: a matrix of parameters works like a fully-connected layer, but no activation function and threshold value, so not really MLP?

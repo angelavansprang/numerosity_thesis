@@ -139,11 +139,16 @@ def load_ViTpatches(dataset, objective, layer=0, threshold_patches=30, normalize
 
         X = np.asarray(X)
         Y = np.asarray(Y)
-        X = np.concatenate([X, np.ones((X.shape[0], 1))], axis=1)
+        # X = np.concatenate([X, np.ones((X.shape[0], 1))], axis=1)
+
+        # print(X.shape)
+        # print(np.linalg.norm(X[0][:]))
 
         if normalize:
+            # print(np.linalg.norm(X, axis=1, keepdims=True)[0][:])
             X /= np.linalg.norm(X, axis=1, keepdims=True)
 
+        X = X.astype(np.float32)
         data.append(X)
         data.append(Y)
 
@@ -600,7 +605,7 @@ kernel2params = {
 if __name__ == "__main__":
     mode = sys.argv[1].replace("--", "")
     parser = argparse.ArgumentParser(description="Perform kernelized object removal")
-    parser.add_argument("--normalize", type=int, default=1, required=False)
+    # parser.add_argument("--normalize", type=int, default=1, required=False)
     parser.add_argument("--mode", type=str, default="malevic", required=False)
     parser.add_argument("--kernel_type", type=str, default=None, required=False)
     parser.add_argument("--dataset", choices=["sup1", "pos"], required=True)
@@ -611,6 +616,7 @@ if __name__ == "__main__":
     mode = args.mode
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("device: ", device)
+    normalize = False  # note that this was True before 22.03.23
 
     if args.kernel_type is not None:
         kernels = {args.kernel_type: kernels[args.kernel_type]}
@@ -624,7 +630,7 @@ if __name__ == "__main__":
             args.objective,
             args.layer,
             threshold_patches=30,
-            normalize=True,
+            normalize=False,  # note that this was True before 22.03.23
         )
         print("ViT patches loaded")
     else:
@@ -695,253 +701,249 @@ if __name__ == "__main__":
 
     for d in [1024]:
         for kernel_type in kernels.keys():
-            for normalize in [args.normalize]:
-                if mode == "glove":
-                    X, Y, X_dev, Y_dev, X_test, Y_test = load_glove(normalize=normalize)
-                elif mode == "bios":
-                    X, Y, X_dev, Y_dev, X_test, Y_test = load_biasbios(
-                        normalize=normalize
-                    )
-                elif mode == "synthetic":
-                    X, Y, X_dev, Y_dev = load_synthetic(normalize=True)
-                elif mode == "malevic":
-                    X, Y, X_dev, Y_dev, X_test, Y_test = load_ViTpatches(
-                        args.dataset,
-                        args.objective,
-                        args.layer,
-                        threshold_patches=30,
-                        normalize=normalize,
-                    )
+            # for normalize in [args.normalize]:
+            if mode == "glove":
+                X, Y, X_dev, Y_dev, X_test, Y_test = load_glove(normalize=normalize)
+            elif mode == "bios":
+                X, Y, X_dev, Y_dev, X_test, Y_test = load_biasbios(normalize=normalize)
+            elif mode == "synthetic":
+                X, Y, X_dev, Y_dev = load_synthetic(normalize=True)
+            elif mode == "malevic":
+                X, Y, X_dev, Y_dev, X_test, Y_test = load_ViTpatches(
+                    args.dataset,
+                    args.objective,
+                    args.layer,
+                    threshold_patches=30,
+                    normalize=normalize,
+                )
 
-                X, Y = X[:NN], Y[:NN]
+            X, Y = X[:NN], Y[:NN]
 
-                for i, gamma in enumerate(kernel2params[kernel_type]["gammas"]):
-                    for j, degree in enumerate(kernel2params[kernel_type]["degrees"]):
-                        for k, alpha in enumerate(kernel2params[kernel_type]["alphas"]):
-                            # calculate kernel approximation
-                            print(
-                                "Start with calculating the nystrom approximation (gamma: {gamma}, degrees: {degree}, alphas: {alpha})"
+            for i, gamma in enumerate(kernel2params[kernel_type]["gammas"]):
+                for j, degree in enumerate(kernel2params[kernel_type]["degrees"]):
+                    for k, alpha in enumerate(kernel2params[kernel_type]["alphas"]):
+                        # calculate kernel approximation
+                        print(
+                            "Start with calculating the nystrom approximation (gamma: {gamma}, degrees: {degree}, alphas: {alpha})"
+                        )
+                        X_kernel, S, X1 = calc_nystrom(
+                            X.copy(),
+                            d=d,
+                            kernel_func=kernels[kernel_type]["np"],
+                            alpha=alpha,
+                            gamma=gamma,
+                            degree=degree,
+                        )
+                        print("Found the nystrom approximation")
+                        X_dev_kernel = (
+                            kernels[kernel_type]["np"](
+                                X_dev, X1, gamma=gamma, degree=degree, alpha=alpha
                             )
-                            X_kernel, S, X1 = calc_nystrom(
-                                X.copy(),
-                                d=d,
-                                kernel_func=kernels[kernel_type]["np"],
-                                alpha=alpha,
-                                gamma=gamma,
-                                degree=degree,
+                            @ S
+                        )
+                        X_test_kernel = (
+                            kernels[kernel_type]["np"](
+                                X_test, X1, gamma=gamma, degree=degree, alpha=alpha
                             )
-                            print("Found the nystrom approximation")
-                            X_dev_kernel = (
-                                kernels[kernel_type]["np"](
-                                    X_dev, X1, gamma=gamma, degree=degree, alpha=alpha
-                                )
-                                @ S
-                            )
-                            X_test_kernel = (
-                                kernels[kernel_type]["np"](
-                                    X_test, X1, gamma=gamma, degree=degree, alpha=alpha
-                                )
-                                @ S
-                            )
+                            @ S
+                        )
 
-                            print(kernel_type, gamma, degree, alpha)
-                            if np.isnan(np.sum(X_kernel)):
-                                continue
+                        print(kernel_type, gamma, degree, alpha)
+                        if np.isnan(np.sum(X_kernel)):
+                            continue
 
-                            params_str = "kernel-type={}_d={}_gamma={}_degree={}_alpha={}".format(
+                        params_str = (
+                            "kernel-type={}_d={}_gamma={}_degree={}_alpha={}".format(
                                 kernel_type, d, str(gamma), str(degree), str(alpha)
                             )
+                        )
 
-                            # make necessary directories to store results
-                            os.makedirs(
-                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/projected",
-                                exist_ok=True,
+                        # make necessary directories to store results
+                        os.makedirs(
+                            f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/projected",
+                            exist_ok=True,
+                        )
+                        os.makedirs(
+                            f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/preimage",
+                            exist_ok=True,
+                        )
+                        os.makedirs(
+                            f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/nystrom",
+                            exist_ok=True,
+                        )
+
+                        # run adversarial game
+
+                        RANK = 1
+
+                        ws, advs, best_adv, best_score = solve_fantope_relaxation(
+                            X_kernel,
+                            Y,
+                            d=RANK,
+                            init_beta=None,
+                            device=device,
+                            out_iters=35000,
+                            in_iters_adv=1,
+                            in_iters_clf=1,
+                            batch_size=128,
+                            epsilon=0.025,
+                            noise_std=1e-3,
+                            lr=0.01,
+                            weight_decay=1e-5,
+                            momentum=0.0,
+                        )
+
+                        U, D = get_svd(best_adv)
+                        U = U.T
+                        W = U[-RANK:]
+                        P = np.eye(X_kernel.shape[1]) - W.T @ W
+                        with open(
+                            f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/P.{params_str}.pickle",
+                            "wb",
+                        ) as f:
+                            pickle.dump(P, f)
+
+                        X_kernel_proj = X_kernel @ P
+                        X_dev_kernel_proj = X_dev_kernel @ P
+                        X_test_kernel_proj = X_test_kernel @ P
+
+                        with open(
+                            f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/projected/X_train.proj.{params_str}.pickle",
+                            "wb",
+                        ) as f:
+                            pickle.dump(X_kernel_proj, f)
+                        with open(
+                            f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/projected/X_val.proj.{params_str}.pickle",
+                            "wb",
+                        ) as f:
+                            pickle.dump(X_dev_kernel_proj, f)
+                        with open(
+                            f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/projected/X_test.proj.{params_str}.pickle",
+                            "wb",
+                        ) as f:
+                            pickle.dump(X_test_kernel_proj, f)
+
+                        with open(
+                            f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/nystrom/X_train.proj.{params_str}.pickle",
+                            "wb",
+                        ) as f:
+                            pickle.dump(X_kernel, f)
+                        with open(
+                            f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/nystrom/X_val.proj.{params_str}.pickle",
+                            "wb",
+                        ) as f:
+                            pickle.dump(X_dev_kernel, f)
+                        with open(
+                            f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/nystrom/X_test.proj.{params_str}.pickle",
+                            "wb",
+                        ) as f:
+                            pickle.dump(X_test_kernel, f)
+                        # run preimage
+                        mlps = []
+                        for random_try in range(1):
+                            best_mlp, best_Z, best_Z_dev, best_error, best_norm = (
+                                None,
+                                None,
+                                None,
+                                10000,
+                                None,
                             )
-                            os.makedirs(
-                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/preimage",
-                                exist_ok=True,
-                            )
-                            os.makedirs(
-                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/nystrom",
-                                exist_ok=True,
-                            )
 
-                            # run adversarial game
-
-                            RANK = 1
-
-                            ws, advs, best_adv, best_score = solve_fantope_relaxation(
-                                X_kernel,
-                                Y,
-                                d=RANK,
-                                init_beta=None,
-                                device=device,
-                                out_iters=35000,
-                                in_iters_adv=1,
-                                in_iters_clf=1,
-                                batch_size=128,
-                                epsilon=0.025,
-                                noise_std=1e-3,
-                                lr=0.01,
-                                weight_decay=1e-5,
-                                momentum=0.0,
-                            )
-
-                            U, D = get_svd(best_adv)
-                            U = U.T
-                            W = U[-RANK:]
-                            P = np.eye(X_kernel.shape[1]) - W.T @ W
-                            with open(
-                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/P.{params_str}.pickle",
-                                "wb",
-                            ) as f:
-                                pickle.dump(P, f)
-
-                            X_kernel_proj = X_kernel @ P
-                            X_dev_kernel_proj = X_dev_kernel @ P
-                            X_test_kernel_proj = X_test_kernel @ P
-
-                            with open(
-                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/projected/X_train.proj.{params_str}.pickle",
-                                "wb",
-                            ) as f:
-                                pickle.dump(X_kernel_proj, f)
-                            with open(
-                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/projected/X_val.proj.{params_str}.pickle",
-                                "wb",
-                            ) as f:
-                                pickle.dump(X_dev_kernel_proj, f)
-                            with open(
-                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/projected/X_test.proj.{params_str}.pickle",
-                                "wb",
-                            ) as f:
-                                pickle.dump(X_test_kernel_proj, f)
-
-                            with open(
-                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/nystrom/X_train.proj.{params_str}.pickle",
-                                "wb",
-                            ) as f:
-                                pickle.dump(X_kernel, f)
-                            with open(
-                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/nystrom/X_val.proj.{params_str}.pickle",
-                                "wb",
-                            ) as f:
-                                pickle.dump(X_dev_kernel, f)
-                            with open(
-                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/nystrom/X_test.proj.{params_str}.pickle",
-                                "wb",
-                            ) as f:
-                                pickle.dump(X_test_kernel, f)
-                            # run preimage
-                            mlps = []
-                            for random_try in range(1):
-                                best_mlp, best_Z, best_Z_dev, best_error, best_norm = (
-                                    None,
-                                    None,
-                                    None,
-                                    10000,
-                                    None,
+                            for q in range(1):
+                                (
+                                    Z,
+                                    Z_dev,
+                                    mlp,
+                                    error,
+                                    mean_norm_normalized,
+                                ) = calc_preimage_nystrom_mse(
+                                    X,
+                                    X_kernel_proj,
+                                    X_dev,
+                                    X_dev_kernel_proj,
+                                    X1,
+                                    S,
+                                    kernels[kernel_type]["torch"],
+                                    gamma,
+                                    degree,
+                                    alpha,
+                                    P,
+                                    device=device,
                                 )
-
-                                for q in range(1):
+                                if error < best_error:
                                     (
-                                        Z,
-                                        Z_dev,
-                                        mlp,
+                                        best_mlp,
+                                        best_Z,
+                                        best_Z_dev,
+                                        best_error,
+                                        best_mean_norm_normalized,
+                                    ) = (
+                                        copy.deepcopy(mlp),
+                                        copy.deepcopy(Z),
+                                        copy.deepcopy(Z_dev),
                                         error,
                                         mean_norm_normalized,
-                                    ) = calc_preimage_nystrom_mse(
-                                        X,
-                                        X_kernel_proj,
-                                        X_dev,
-                                        X_dev_kernel_proj,
-                                        X1,
-                                        S,
-                                        kernels[kernel_type]["torch"],
-                                        gamma,
-                                        degree,
-                                        alpha,
-                                        P,
-                                        device=device,
-                                    )
-                                    if error < best_error:
-                                        (
-                                            best_mlp,
-                                            best_Z,
-                                            best_Z_dev,
-                                            best_error,
-                                            best_mean_norm_normalized,
-                                        ) = (
-                                            copy.deepcopy(mlp),
-                                            copy.deepcopy(Z),
-                                            copy.deepcopy(Z_dev),
-                                            error,
-                                            mean_norm_normalized,
-                                        )
-
-                                mlp = best_mlp
-                                Z = best_Z
-                                Z_dev = best_Z_dev
-                                error = best_error
-                                mean_norm_normalized = best_mean_norm_normalized
-                                with torch.no_grad():
-                                    Z_test = (
-                                        best_mlp(
-                                            torch.tensor(X_test).to(device).float()
-                                        )
-                                        .detach()
-                                        .cpu()
-                                        .numpy()
                                     )
 
-                                print(
-                                    "error: {}; mean_norm: {}; relative error: {}".format(
-                                        error,
-                                        mean_norm_normalized,
-                                        error * 100 / mean_norm_normalized,
-                                    )
+                            mlp = best_mlp
+                            Z = best_Z
+                            Z_dev = best_Z_dev
+                            error = best_error
+                            mean_norm_normalized = best_mean_norm_normalized
+                            with torch.no_grad():
+                                Z_test = (
+                                    best_mlp(torch.tensor(X_test).to(device).float())
+                                    .detach()
+                                    .cpu()
+                                    .numpy()
                                 )
-                                with open(
-                                    f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/preimage/MLP.{params_str}.pickle",
-                                    "wb",
-                                ) as f:
-                                    pickle.dump(
-                                        (mlp.cpu(), error, mean_norm_normalized), f
-                                    )
 
-                                with open(
-                                    f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/preimage/Z_train.{params_str}.pickle",
-                                    "wb",
-                                ) as f:
-                                    pickle.dump(
-                                        (Z, error, mean_norm_normalized, best_score), f
-                                    )
-                                    # Z_dev = calc_preimage_nystrom_mse(X_dev,X_dev_kernel_proj,X1,S,kernels[kernel_type]["torch"], gamma, degree, alpha,P)
+                            print(
+                                "error: {}; mean_norm: {}; relative error: {}".format(
+                                    error,
+                                    mean_norm_normalized,
+                                    error * 100 / mean_norm_normalized,
+                                )
+                            )
+                            with open(
+                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/preimage/MLP.{params_str}.pickle",
+                                "wb",
+                            ) as f:
+                                pickle.dump((mlp.cpu(), error, mean_norm_normalized), f)
 
-                                with open(
-                                    f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/preimage/Z_val.{params_str}.pickle",
-                                    "wb",
-                                ) as f:
-                                    pickle.dump(
-                                        (
-                                            Z_dev,
-                                            error,
-                                            mean_norm_normalized,
-                                            best_score,
-                                        ),
-                                        f,
-                                    )
+                            with open(
+                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/preimage/Z_train.{params_str}.pickle",
+                                "wb",
+                            ) as f:
+                                pickle.dump(
+                                    (Z, error, mean_norm_normalized, best_score), f
+                                )
+                                # Z_dev = calc_preimage_nystrom_mse(X_dev,X_dev_kernel_proj,X1,S,kernels[kernel_type]["torch"], gamma, degree, alpha,P)
 
-                                with open(
-                                    f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/{params_str}/preimage/Z_test.{params_str}.pickle",
-                                    "wb",
-                                ) as f:
-                                    pickle.dump(
-                                        (
-                                            Z_test,
-                                            error,
-                                            mean_norm_normalized,
-                                            best_score,
-                                        ),
-                                        f,
-                                    )
+                            with open(
+                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/preimage/Z_val.{params_str}.pickle",
+                                "wb",
+                            ) as f:
+                                pickle.dump(
+                                    (
+                                        Z_dev,
+                                        error,
+                                        mean_norm_normalized,
+                                        best_score,
+                                    ),
+                                    f,
+                                )
+
+                            with open(
+                                f"../kernel_removal/{kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/preimage/Z_test.{params_str}.pickle",
+                                "wb",
+                            ) as f:
+                                pickle.dump(
+                                    (
+                                        Z_test,
+                                        error,
+                                        mean_norm_normalized,
+                                        best_score,
+                                    ),
+                                    f,
+                                )

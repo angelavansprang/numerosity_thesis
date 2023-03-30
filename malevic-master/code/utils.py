@@ -11,12 +11,12 @@ import os
 import pickle
 from torch.utils.data import DataLoader
 
-# import models
-# import transformer_patches
-# import utils_amnesic_probing
+import models
+import transformer_patches
+import utils_amnesic_probing
 
 sys.path.append("../../")
-# import Transformer_MM_Explainability.CLIP.clip as clip
+import Transformer_MM_Explainability.CLIP.clip as clip
 
 # GLOBAL VARIABLES
 global_path = ".."
@@ -132,7 +132,7 @@ def get_repr(img_path, device, model, preprocess):
     img = preprocess(Image.open(img_path)).unsqueeze(0).to(device)
 
     # First step: make patches by a 2d convolution with a kernel_size and stride of 32 (the patch size)
-    # here, we get 768 patches of 7x7 pixels
+    # here, we get 7x7 patches of 768 pixels
     z = model.visual.conv1(
         img.type(model.visual.conv1.weight.dtype)
     )  # shape = [*, width, grid, grid]
@@ -729,6 +729,50 @@ def get_randoms_twopatches(patches):
     return patch_id1, patch_id2, 0
 
 
+def get_samecolor_twopatches(patches, color="red"):
+    # The available colors are "white", "blue", "red", "yellow" & "green"
+    # If no 2 patches of the same color are available, then the label returned is -1
+    keys = list(patches.keys())
+    random.shuffle(keys)
+    good_patches = []
+    for patch_id in keys:
+        boxes = patches[patch_id]
+        for box in boxes:
+            if box["color"] == color:
+                good_patches.append(patch_id)
+                if len(good_patches) == 2:
+                    patch_id1, patch_id2 = good_patches[0], good_patches[1]
+                    boxes1 = patches[patch_id1]
+                    boxes2 = patches[patch_id2]
+                    for box1 in boxes1:
+                        for box2 in boxes2:
+                            label = 1 if box1["object_id"] == box2["object_id"] else 0
+                            return good_patches[0], good_patches[1], label
+    return -1, -1, -1
+
+
+def get_sameshape_twopatches(patches, shape="triangle"):
+    # The available colors are "square", "rectangle", "circle", "triangle
+    # If no 2 patches of the same shape are available, then the label returned is -1
+    keys = list(patches.keys())
+    random.shuffle(keys)
+    good_patches = []
+    for patch_id in keys:
+        boxes = patches[patch_id]
+        for box in boxes:
+            if box["shape"] == shape:
+                good_patches.append(patch_id)
+                if len(good_patches) == 2:
+                    patch_id1, patch_id2 = good_patches[0], good_patches[1]
+                    boxes1 = patches[patch_id1]
+                    boxes2 = patches[patch_id2]
+                    for box1 in boxes1:
+                        for box2 in boxes2:
+                            label = 1 if box1["object_id"] == box2["object_id"] else 0
+                            return good_patches[0], good_patches[1], label
+    return -1, -1, -1
+
+
 def build_dataloader_twopatches(
     dataset,
     layer,
@@ -737,6 +781,7 @@ def build_dataloader_twopatches(
     threshold=30,
     amnesic_obj=None,
     first_projection_only=False,
+    mode="normal",
 ):
     """Return dataloaders with the (visual) CLIP representations of one patch as data and the objective as label.
 
@@ -745,6 +790,7 @@ def build_dataloader_twopatches(
     balanced (bool): whether the dataloaders should be made balanced (i.e. same number of instances per class)
     objective (string): either 'color' or 'shape'
     threshold (int): do not include images with more object patches than the threshold
+    mode: one of the following: {"normal", "same_color", "same_shape"}
     """
 
     def stack_reprs_2patches(patch1, patch2, label, repr):
@@ -789,21 +835,32 @@ def build_dataloader_twopatches(
 
         if len(nodes) <= threshold:
             if split == "train" or split == "val":
-                # find 3 repr patch duo's: hard positives, hard negatives, random
-                patch1, patch2, label = find_hard_positives_twopatches(patches)
-                z, label = stack_reprs_2patches(patch1, patch2, label, repr)
-                inputs.append(z)
-                targets.append(label)
+                if mode == "normal":
+                    # find 3 repr patch duo's: hard positives, hard negatives, random
+                    patch1, patch2, label = find_hard_positives_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
 
-                patch1, patch2, label = get_hard_negatives_twopatches(patches)
-                z, label = stack_reprs_2patches(patch1, patch2, label, repr)
-                inputs.append(z)
-                targets.append(label)
+                    patch1, patch2, label = get_hard_negatives_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
 
-                patch1, patch2, label = get_randoms_twopatches(patches)
-                z, label = stack_reprs_2patches(patch1, patch2, label, repr)
-                inputs.append(z)
-                targets.append(label)
+                    patch1, patch2, label = get_randoms_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
+                elif mode == "same_color":
+                    patch1, patch2, label = get_samecolor_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
+                elif mode == "same_shape":
+                    patch1, patch2, label = get_sameshape_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
             elif split == "test":
                 nodes = list(nodes)
                 for patch1 in nodes:
@@ -843,7 +900,8 @@ def build_dataloader_twopatches(
         inputs = amnesic_inputs
 
     dataset_train = list(zip(inputs, targets))
-    print("len dataset: ", len(dataset_train))
+    print(f"majority label of 1 for split {split}: ", sum(targets) / len(targets))
+    print("len dataset: ", len(targets))
 
     if split == "train":
         dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)

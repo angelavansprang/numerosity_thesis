@@ -9,10 +9,10 @@ from collections import defaultdict
 
 
 def open_image_withpatches(imgname, dataset, split, to_save=False):
-
+    print(f"../data/{dataset}/images/{split}/{imgname}")
     image = Image.open(
-        # f"../data/{dataset}/images/{split}/{imgname}"
-        f"../examples/{dataset}/30patchimages/{imgname}"
+        f"../data/{dataset}/images/{split}/{imgname}"
+        # f"../examples/{dataset}/30patchimages/{imgname}"
     )
     my_dpi = 300
 
@@ -49,7 +49,7 @@ def open_image_withpatches(imgname, dataset, split, to_save=False):
         for i in range(nx):
             x = myInterval / 2.0 + float(i) * myInterval
             ax.text(
-                x, y, "{:d}".format(i + j * nx), color="w", ha="center", va="center"
+                x, y, "{:d}".format(i + j * nx + 1), color="w", ha="center", va="center"
             )
 
     ax.set_xticklabels([])
@@ -237,4 +237,4 @@ if __name__ == "__main__":
     #     if img_name[0] == "b" and img_name[1] == "b":
     #         open_image_withpatches(img_name, "sup1", "train", to_save=True)
 
-    store_patches_dataset("pos")
+    store_patches_dataset("sup1")

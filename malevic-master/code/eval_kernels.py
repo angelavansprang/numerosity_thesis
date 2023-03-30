@@ -220,28 +220,44 @@ def learn_multiple_kernels(
 
 
 kernels2params_test = {
-    "poly": {"degrees": [1, 2, 3], "alphas": [0.5], "gammas": [0.5]},
-    "rbf": {"gammas": [0.3], "degrees": [None], "alphas": [None]},
-    "laplace": {"gammas": [0.3], "degrees": [None], "alphas": [None]},
-    "sigmoid": {"gammas": [0.01], "degrees": [None], "alphas": [0.0]},
-    "linear": {"gammas": [None], "degrees": [None], "alphas": [None]},
+    "poly": {"degrees": [2], "alphas": [1], "gammas": [0.1]},
 }
+# kernels2params_test = {
+#     "poly": {"degrees": [1, 2, 3], "alphas": [0.5], "gammas": [0.5]},
+#     "rbf": {"gammas": [0.3], "degrees": [None], "alphas": [None]},
+#     "laplace": {"gammas": [0.3], "degrees": [None], "alphas": [None]},
+#     "sigmoid": {"gammas": [0.01], "degrees": [None], "alphas": [0.0]},
+#     "linear": {"gammas": [None], "degrees": [None], "alphas": [None]},
+# }
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="An argparse example")
     # parser.add_argument("--normalize", type=int, default=1, required=False)
-    parser.add_argument("--run_id", type=int, default=-1, required=True)
+    # parser.add_argument("--run_id", type=int, default=-1, required=True)
     parser.add_argument("--dataset", choices=["sup1", "pos"], required=True)
     parser.add_argument("--objective", choices=["shape", "color"], required=True)
     parser.add_argument("--layer", type=int, required=True)
+    parser.add_argument("--kernel_type", type=str, default=None, required=True)
     args = parser.parse_args()
-    run_id = args.run_id
-    os.makedirs(
-        "../kernel_removal/interim/malevic{}/kernel/preimage/eval".format(run_id),
-        exist_ok=True,
+
+    # polynomial kernel
+    d = 1024
+    gamma = 0.1
+    alpha = 1
+    degree = 2
+
+    # # sigmoid kernel
+    # d = 1024
+    # gamma = 0.005
+    # alpha = 0
+    # degree = None
+
+    params_str = "kernel-type={}_d={}_gamma={}_degree={}_alpha={}".format(
+        args.kernel_type, d, str(gamma), str(degree), str(alpha)
     )
+
     os.makedirs(
-        "../kernel_removal/interim/malevic{}/kernel/preimage/eval".format(run_id),
+        f"../kernel_removal/{args.kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/preimage/eval",
         exist_ok=True,
     )
 
@@ -251,14 +267,14 @@ if __name__ == "__main__":
         args.objective,
         args.layer,
         threshold_patches=30,
-        normalize=True,
+        normalize=False,
     )
-    print("majority dev: {}".format(max(Y_dev.mean(), 1 - Y_dev.mean())))
-    print("majority test: {}".format(max(Y_test.mean(), 1 - Y_test.mean())))
+    # print("majority dev: {}".format(max(Y_dev.mean(), 1 - Y_dev.mean())))
+    # print("majority test: {}".format(max(Y_test.mean(), 1 - Y_test.mean())))
     # X,Y,X_dev,Y_dev = load_synthetic(normalize=True, mode="poly")
     params2score = {}
-    np.random.seed(run_id)
-    random.seed(run_id)
+    np.random.seed(42)
+    random.seed(42)
 
     # with open(
     #     "../kernel_removal/interim/malevic{}/kernel/multiple/multiple-kernels.pickle".format(
@@ -276,11 +292,11 @@ if __name__ == "__main__":
     #     print("Done!")
 
     for filename in os.listdir(
-        "../kernel_removal/interim/malevic{}/kernel/preimage".format(run_id)
+        f"../kernel_removal/{args.kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/preimage"
     ):
         if not filename.endswith(".pickle"):
             continue
-        if not "Z." in filename:
+        if not "Z_" in filename:
             continue
         if "UniformMK-RBF" in filename:
             continue
@@ -296,25 +312,19 @@ if __name__ == "__main__":
             float(params_dict["alpha"]) if params_dict["alpha"] != "None" else 0,
         )
         with open(
-            "../kernel_removal/interim/malevic{}/kernel/preimage/Z.{}.pickle".format(
-                run_id, params_str
-            ),
+            f"../kernel_removal/{args.kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/preimage/Z_train.{params_str}.pickle",
             "rb",
         ) as f:
             Z, error, mean_norm_normalized, post_proj_acc = pickle.load(f)
             # Z = Z / np.linalg.norm(Z, axis = 1, keepdims = True)
         with open(
-            "../kernel_removal/interim/malevic{}/kernel/preimage/Z_dev.{}.pickle".format(
-                run_id, params_str
-            ),
+            f"../kernel_removal/{args.kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/preimage/Z_val.{params_str}.pickle",
             "rb",
         ) as f:
             Z_dev, error, mean_norm_normalized, post_proj_acc = pickle.load(f)
             # Z_dev = Z_dev / np.linalg.norm(Z_dev, axis = 1, keepdims = True)
         with open(
-            "../kernel_removal/interim/malevic{}/kernel/preimage/Z_test.{}.pickle".format(
-                run_id, params_str
-            ),
+            f"../kernel_removal/{args.kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/preimage/Z_test.{params_str}.pickle",
             "rb",
         ) as f:
             Z_test, error, mean_norm_normalized, post_proj_acc = pickle.load(f)
@@ -337,9 +347,7 @@ if __name__ == "__main__":
         #     "linear",
         #     "mlp",
         # ]: # not all kernels are trained yet
-        for kernel_type in [
-            "poly",
-        ]:
+        for kernel_type in [args.kernel_type]:
             if kernel_type == "mlp":
                 model = MLPClassifier()
             else:
@@ -358,14 +366,17 @@ if __name__ == "__main__":
                         kernel=partial(rbf_kernel, gamma=0.3)
                     )  # 1.0/Z.shape[1]))
                 elif kernel_type == "sigmoid":
-                    model = SVC(kernel=kernel_type, gamma=0.01)
+                    # model = SVC(kernel=kernel_type, gamma=0.01)
+                    model = SVC(kernel=kernel_type, gamma=0.005)
                 elif kernel_type == "poly":
-                    model = SVC(kernel=kernel_type, degree=3, coef0=0.5, gamma=0.5)
+                    # model = SVC(kernel=kernel_type, degree=3, coef0=0.5, gamma=0.5)
+                    model = SVC(kernel=kernel_type, degree=2, coef0=1, gamma=0.1)
                 else:
                     model = SVC(kernel=kernel_type)
             print("Fitting...")
             model.fit(Z, Y)
             score = model.score(Z_test, Y_test)
+            print("score: \n", score)
 
             params_str = params_str.replace(
                 ".pickle", "_post-proj-acc={}.pickle".format(post_proj_acc)
@@ -391,29 +402,33 @@ if __name__ == "__main__":
             ] = score
 
             score_same = None
-            if (
-                kernel_type == params_dict["kernel-type"]
-            ):  # and kernel_type not in ["UniformMK"]:
-                if kernel_type == "laplace":
-                    model = SVC(kernel=partial(laplace_kernel, gamma=gamma))
-                elif kernel_type == "rbf":
-                    model = SVC(kernel=partial(rbf_kernel, gamma=gamma))
-                elif kernel_type == "EasyMKL":
-                    model = model = SVC(kernel=easymkl_func.__call__)
-                elif kernel_type == "UniformMK":
-                    model = model = SVC(kernel=unifommk_func.__call__)
-                else:
-                    print("using parameters", alpha, gamma, degree)
-                    model = SVC(
-                        kernel=kernel_type, gamma=gamma, degree=degree, coef0=alpha
-                    )
-                model.fit(Z, Y)
-                score_same = model.score(Z_test, Y_test)
-                params2score[
-                    params_str.replace("_unit-vecs=True", "")
-                    + "_"
-                    + "adv-type={}_same".format(kernel_type)
-                ] = score_same
+            # if (
+            #     kernel_type == params_dict["kernel-type"]
+            # ):  # and kernel_type not in ["UniformMK"]:
+            #     print("Yes, we're here")
+            #     print(params_dict)
+            #     score_same = score
+            #     break
+            #     if kernel_type == "laplace":
+            #         model = SVC(kernel=partial(laplace_kernel, gamma=gamma))
+            #     elif kernel_type == "rbf":
+            #         model = SVC(kernel=partial(rbf_kernel, gamma=gamma))
+            #     elif kernel_type == "EasyMKL":
+            #         model = model = SVC(kernel=easymkl_func.__call__)
+            #     elif kernel_type == "UniformMK":
+            #         model = model = SVC(kernel=unifommk_func.__call__)
+            #     else:
+            #         print("using parameters", alpha, gamma, degree)
+            #         model = SVC(
+            #             kernel=kernel_type, gamma=gamma, degree=degree, coef0=alpha
+            #         )
+            #     model.fit(Z, Y)
+            #     score_same = model.score(Z_test, Y_test)
+            #     params2score[
+            #         params_str.replace("_unit-vecs=True", "")
+            #         + "_"
+            #         + "adv-type={}_same".format(kernel_type)
+            # ] = score_same
             print(params_str, kernel_type, score, score_same, post_proj_acc)
             print(
                 "Relative preimage error: {} %; post-proj-acc: {} %".format(
@@ -423,9 +438,7 @@ if __name__ == "__main__":
             print("-----------------------------------")
         print("=================================================")
     with open(
-        "../kernel_removal/interim/malevic{}/kernel/preimage/eval/scores_with_multiple2.pickle".format(
-            run_id
-        ),
+        f"../kernel_removal/{args.kernel_type}/{args.dataset}/{args.objective}/layer{args.layer}/v2/{params_str}/preimage/eval/scores_with_multiple2.pickle",
         "wb",
     ) as f:
         pickle.dump(params2score, f)

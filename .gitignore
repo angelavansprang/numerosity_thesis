@@ -21,6 +21,8 @@
 !/malevic-master/code/run_kernels.py
 !/malevic-master/code/relaxed_inlp.py
 !/malevic-master/code/train_amnprobe.py
+!/malevic-master/code/research_amnesic.ipynb
+!/malevic-master/code/tuned_lens.ipynb
 !/malevic-master/results
 !/malevic-master/plots
 
@@ -33,3 +35,5 @@
 /VALSE-main
 
 /visual_genome_python_driver-master
+
+/tuned-lens-main

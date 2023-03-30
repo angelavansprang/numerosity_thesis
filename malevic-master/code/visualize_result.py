@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+import os
 
 
 layer2name = {
@@ -25,9 +26,42 @@ layer2name = {
 
 
 def open_results(filename):
+    if filename == "eval_kernels":
+        return get_scores_eval_kernels(
+            kernel_type="poly", dataset="pos", amn_objective="color"
+        )
     with open(filename, "rb") as handle:
         y = pickle.load(handle)
     return y
+
+
+def get_scores_eval_kernels(kernel_type, dataset, amn_objective):
+    if kernel_type == "poly":
+        d = 1024
+        gamma = 0.1
+        alpha = 1
+        degree = 2
+    elif kernel_type == "sigmoid":
+        d = 1024
+        gamma = 0.005
+        alpha = 0
+        degree = None
+
+    params_str = "kernel-type={}_d={}_gamma={}_degree={}_alpha={}".format(
+        kernel_type, d, str(gamma), str(degree), str(alpha), kernel_type
+    )
+
+    results = {}
+    for layer in range(17):
+        file = f"../kernel_removal/{kernel_type}/{dataset}/{amn_objective}/layer{layer}/{params_str}/preimage/eval/scores_with_multiple2.pickle"
+        if os.path.exists(file):
+            with open(file, "rb") as f:
+                score = pickle.load(f)
+            results[layer] = [score[params_str + f"_adv-type={kernel_type}"]]
+        # else:
+        #     results[layer] = np.nan
+    print(results)
+    return results
 
 
 def plot_accuracy_probes(config):
@@ -44,6 +78,7 @@ def plot_accuracy_probes(config):
     for name in config["filenames"]:
         results.append(open_results(name))
 
+    print(results)
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
 
@@ -51,10 +86,16 @@ def plot_accuracy_probes(config):
         x = [int(key) for key in result.keys()]
         while len(x) < 17:
             x.append(np.nan)
-        y = [np.mean(result[key]) for key in result.keys()]
+        y = [
+            np.mean(result[key]) if result[key] is not np.nan else np.nan
+            for key in result.keys()
+        ]
         while len(y) < 17:
             y.append(np.nan)
-        yerr = [np.std(result[key]) for key in result.keys()]
+        yerr = [
+            np.std(result[key]) if result[key] is not np.nan else np.nan
+            for key in result.keys()
+        ]
         while len(yerr) < 17:
             yerr.append(np.nan)
         xs.append(x)
@@ -98,49 +139,54 @@ def plot_accuracy_probes(config):
         plt.ylim([0, 1.0])
 
     if config["save"]:
-        if N_probes == 4:
-            imgname = config["filenames"][1].replace("../results/test_results_", "")
-            imgname = imgname.replace(
-                ".pickle", f'{"_transformeronly" if config["only_transformer"] else ""}'
-            )
-            imgname = (
-                config["filenames"][0].replace(".pickle", "")
-                + "_"
-                + imgname
-                + "_"
-                + config["labels"][2]
-                + config["labels"][3]
-                + ".png"
-            )
-        elif N_probes == 3:
-            imgname = config["filenames"][1].replace("../results/test_results_", "")
-            imgname = imgname.replace(
-                ".pickle", f'{"_transformeronly" if config["only_transformer"] else ""}'
-            )
-            imgname = (
-                config["filenames"][0].replace(".pickle", "")
-                + "_"
-                + imgname
-                + "_"
-                + config["labels"][2]
-                + ".png"
-            )
-        elif N_probes == 2:
-            imgname = config["filenames"][1].replace("../results/test_results_", "")
-            imgname = imgname.replace(
-                ".pickle",
-                f'{"_transformeronly.png" if config["only_transformer"] else ".png"}',
-            )
-            imgname = config["filenames"][0].replace(".pickle", "") + imgname
+        if config["img_name"] is not None:
+            imgname = "../plots/" + config["img_name"]
+        else:
+            if N_probes == 4:
+                imgname = config["filenames"][1].replace("../results/test_results_", "")
+                imgname = imgname.replace(
+                    ".pickle",
+                    f'{"_transformeronly" if config["only_transformer"] else ""}',
+                )
+                imgname = (
+                    config["filenames"][0].replace(".pickle", "")
+                    + "_"
+                    + imgname
+                    + "_"
+                    + config["labels"][2]
+                    + config["labels"][3]
+                    + ".png"
+                )
+            elif N_probes == 3:
+                imgname = config["filenames"][1].replace("../results/test_results_", "")
+                imgname = imgname.replace(
+                    ".pickle",
+                    f'{"_transformeronly" if config["only_transformer"] else ""}',
+                )
+                imgname = (
+                    config["filenames"][0].replace(".pickle", "")
+                    + "_"
+                    + imgname
+                    + "_"
+                    + config["labels"][2]
+                    + ".png"
+                )
+            elif N_probes == 2:
+                imgname = config["filenames"][1].replace("../results/test_results_", "")
+                imgname = imgname.replace(
+                    ".pickle",
+                    f'{"_transformeronly.png" if config["only_transformer"] else ".png"}',
+                )
+                imgname = config["filenames"][0].replace(".pickle", "") + imgname
 
-        elif N_probes == 1:
-            imgname = config["filenames"][0].replace("../results/test_results_", "")
-            imgname = imgname.replace(
-                ".pickle",
-                f'{"_transformeronly.png" if config["only_transformer"] else ".png"}',
-            )
+            elif N_probes == 1:
+                imgname = config["filenames"][0].replace("../results/test_results_", "")
+                imgname = imgname.replace(
+                    ".pickle",
+                    f'{"_transformeronly.png" if config["only_transformer"] else ".png"}',
+                )
 
-        imgname = imgname.replace("../results", "../plots")
+            imgname = imgname.replace("../results", "../plots")
         plt.ylabel("Accuracy")
         plt.xlabel("Layer")
         plt.savefig(imgname, bbox_inches="tight")
@@ -155,14 +201,17 @@ if __name__ == "__main__":
         "no_plots": 2,
         "filenames": [
             # "../results/test_results_MLP2_pos_color_unbalanced_filtered_{30}_single_patch_no_layernorm_amnesiccolor.pickle",
-            "../results/test_results_linear_layer_pos_shape_unbalanced_filtered_{30}_single_patch_no_layernorm_amnesicshape.pickle",
+            # "../results/test_results_linear_layer_pos_shape_unbalanced_filtered_{30}_single_patch_no_layernorm_amnesicshape.pickle",
             # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
             # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'color'}.pickle",
             # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'shape'}.pickle",
             # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'color'}_firstprojectiononly.pickle",
             # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'shape'}_firstprojectiononly.pickle",
-            "../results/results_amnprngkernelized_shape_lin.pickle",
-            # "../results/results_amnprngkernelized_shape_MLP.pickle",
+            # "../results/results_amnprngkernelized_color_lin.pickle",
+            # "../results/results_amnprngkernelized_color_MLP.pickle",
+            # "eval_kernels",
+            "../results/test_results_MLP2_sup1_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
+            "../results/new_test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
         ],
         "labels": [
             # "no color",
@@ -172,12 +221,16 @@ if __name__ == "__main__":
             # "no shape",
             # "no color (1 iter)",
             # "no shape (1 iter)",
-            "linear removal",
-            "kernelized removal",
+            # "linear probe",
+            # "MLP probe",
+            # '"poly" kernel',
+            "diff color, same shape",
+            "diff color, diff shape",
         ],
         # "labels": ["MLP (sup1)"],
-        "fig_title": "Shape erasure: linear probe",
+        "fig_title": "Binding Problem",
         "save": False,
+        "img_name": "results_bindingproblem.png",  # else: None
         "only_transformer": False,
         "entire_y_axis": False,
     }

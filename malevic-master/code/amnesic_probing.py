@@ -149,7 +149,9 @@ def get_debiasing_projection(
     return P, rowspace_projections, Ws, all_projections, best_projection
 
 
-def train_classifier(D_in, D_out, loader_train, loader_val, loader_test, probe_type="lin"):
+def train_classifier(
+    D_in, D_out, loader_train, loader_val, loader_test, probe_type="lin"
+):
     if probe_type == "lin":
         classifier = models.ProbingHead(
             D_in=D_in, D_out=D_out
