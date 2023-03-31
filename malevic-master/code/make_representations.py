@@ -75,8 +75,8 @@ if __name__ == "__main__":
         device,
         model,
         preprocess,
-        dataset="pos",
+        dataset="posmo",
         to_store=True,
-        balance_objective="n_colors",
-        remove_key=1,
+        balance_objective=None,
+        remove_key=None,
     )

@@ -112,7 +112,7 @@ def experiment_per_layer(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a probe on representations ViT")
-    parser.add_argument("--dataset", choices=["sup1", "pos"], required=True)
+    parser.add_argument("--dataset", choices=["sup1", "pos", "posmo"], required=True)
     parser.add_argument(
         "--objective",
         choices=["binding_problem"],

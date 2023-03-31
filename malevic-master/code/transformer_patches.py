@@ -99,13 +99,17 @@ def store_patches_dataset(dataset):
 
         patches = {}
 
-        for img_name in img_ids:
+        for i, img_name in enumerate(img_ids):
             img_id = img_name.replace(".png", "")
             img_patches = get_all_patches_with_objects(img_name, dataset, split)
             patches[img_id] = dict(img_patches)
+            if i % 100 == 0:
+                print(f"{i}/ {len(img_ids)}")
 
         with open(file_path + repr_name, "wb") as f:
             pickle.dump(patches, f)
+
+        print(f"Split {split} done")
 
 
 # def get_all_patches_with_objects(img_filename, dataset, split):
@@ -237,4 +241,4 @@ if __name__ == "__main__":
     #     if img_name[0] == "b" and img_name[1] == "b":
     #         open_image_withpatches(img_name, "sup1", "train", to_save=True)
 
-    store_patches_dataset("sup1")
+    store_patches_dataset("posmo")
