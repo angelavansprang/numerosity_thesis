@@ -126,8 +126,8 @@ def get_boxes(img_filename, dataset="sup1", split="train"):
 
 
 def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
-    # img_path = f"../data/{dataset}/images/{split}/{img_filename}"
-    img_path = f"../examples/{dataset}/30patchimages/{img_filename}"
+    img_path = f"../data/{dataset}/images/{split}/{img_filename}"
+    # img_path = f"../examples/{dataset}/30patchimages/{img_filename}"
     boxes = get_boxes(img_filename, dataset, split)
 
     plt.rcParams["figure.figsize"] = (10, 10)
@@ -137,13 +137,13 @@ def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
 
     for bbox in boxes:
         print(bbox)
-        ax.add_patch(bbox_to_rect(bbox, "cyan"))
+        ax.add_patch(bbox_to_rect(bbox["box"], "cyan"))
 
     if to_save:
         plt.axis("off")
         plt.savefig(
-            # f"../examples/{dataset}/bb_{img_filename}",
-            f"../examples/{dataset}/30patchimages/bb_{img_filename}",
+            f"../examples/{dataset}/bb_{img_filename}",
+            # f"../examples/{dataset}/30patchimages/bb_{img_filename}",
             bbox_inches="tight",
             pad_inches=0,
         )
@@ -154,9 +154,7 @@ def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
 if __name__ == "__main__":
     import os
 
-    for img in os.listdir("../examples/sup1/30patchimages"):
-        make_img_boxes(img_filename=img, dataset="sup1", split="train", to_save=True)
+    # for img in os.listdir("../examples/sup1/30patchimages"):
+    #     make_img_boxes(img_filename=img, dataset="sup1", split="train", to_save=True)
 
-    # make_img_boxes(
-    #     img_filename="10241.png", dataset="sup1", split="train", to_save=False
-    # )
+    make_img_boxes(img_filename="1.png", dataset="pos", split="test", to_save=False)

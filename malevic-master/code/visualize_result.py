@@ -82,6 +82,17 @@ def plot_accuracy_probes(config):
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
 
+    # plt.rcParams.update(
+    #     {
+    #         "font.family": "serif",  # use serif/main font for text elements
+    #         # "text.usetex": True,  # use inline math for ticks
+    #         "pgf.rcfonts": False,  # don't setup fonts from rc parameters
+    #     }
+    # )
+
+    plt.rc("text", usetex=True)
+    plt.rc("font", family="serif")
+
     for result in results:
         x = [int(key) for key in result.keys()]
         while len(x) < 17:
@@ -103,17 +114,18 @@ def plot_accuracy_probes(config):
         yerrors.append(yerr)
 
     if not config["only_transformer"]:
-        color = ["blue", "orange", "green", "orange", "green"]
-        marker = ["o", "o", "o", "x", "x"]
+        # color = ["blue", "orange", "green", "orange", "green"]
+        # marker = ["o", "o", "o", "x", "x"]
         for i in range(N_probes):
             ax.errorbar(
                 xs[i],
                 ys[i],
                 yerrors[i],
                 linestyle="--",
-                marker=marker[i],
+                # marker=marker[i],
+                marker="o",
                 label=config["labels"][i],
-                color=color[i],
+                # color=color[i],
             )
         plt.xticks(range(17), labels=layer2name.values(), rotation=45)
         plt.suptitle(fig_title)
@@ -198,21 +210,19 @@ def plot_accuracy_probes(config):
 
 if __name__ == "__main__":
     config = {
-        "no_plots": 2,
+        "no_plots": 1,
         "filenames": [
-            # "../results/test_results_MLP2_pos_color_unbalanced_filtered_{30}_single_patch_no_layernorm_amnesiccolor.pickle",
-            # "../results/test_results_linear_layer_pos_shape_unbalanced_filtered_{30}_single_patch_no_layernorm_amnesicshape.pickle",
-            # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
-            # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'color'}.pickle",
-            # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'shape'}.pickle",
-            # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'color'}_firstprojectiononly.pickle",
-            # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm_amnesic{'shape'}_firstprojectiononly.pickle",
-            # "../results/results_amnprngkernelized_color_lin.pickle",
-            # "../results/results_amnprngkernelized_color_MLP.pickle",
-            # "eval_kernels",
-            "../results/new_test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
-            "../results/test_results_MLP2_sup1_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
-            "../results/test_results_MLP2_posmo_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
+            # "../results/new_test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
+            # "../results/test_results_MLP2_sup1_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
+            # "../results/test_results_MLP2_posmo_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
+            # "../results/test_results_MLP2_sup1mo_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
+            # "../results/test_results_MLP2_pos_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
+            # "../results/test_results_MLP2_pos_binding_problem_filtered_{30}_no_layernorm_mode:normal_with_black?.pickle",
+            # "../results/test_results_MLP2_trainedonpos_testedonsup1_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
+            # "../results/test_results_MLP2_trainedonpos_testedonposmo_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
+            # "../results/test_results_MLP2_trainedonpos_testedonsup1mo_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
+            "../results/test_results_linear_layer_pos_n_objects_balanced_unfiltered_no_layernorm.pickle",
+            "../results/test_results_MLP2_pos_n_objects_balanced_unfiltered_no_layernorm.pickle",
         ],
         "labels": [
             # "no color",
@@ -225,16 +235,20 @@ if __name__ == "__main__":
             # "linear probe",
             # "MLP probe",
             # '"poly" kernel',
-            "diff color, diff shape",
-            "diff color, same shape",
-            "same color, diff shape",
+            # "diff color, diff shape",
+            # "diff color, diff shape v2",
+            # "diff color, same shape",
+            # "same color, diff shape",
+            # "same color, same shape",
+            "linear",
+            "non-linear",
         ],
         # "labels": ["MLP (sup1)"],
-        "fig_title": "Binding Problem",
-        "save": True,
-        "img_name": "results_bindingproblem.png",  # else: None
+        "fig_title": "Probe accuracy on number of objects",
+        "save": False,
+        "img_name": "n_objects.png",  # else: None
         "only_transformer": False,
-        "entire_y_axis": False,
+        "entire_y_axis": True,
     }
 
     results = plot_accuracy_probes(config)

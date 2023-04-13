@@ -1,0 +1,25 @@
+name: newthesis
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - pip
+  - mkl < 2022
+  - cudatoolkit
+  - pytorch
+  - torchvision
+  - torchaudio
+  - scikit-learn
+  - pip:
+    - pytorch-lightning
+    - tensorboard
+    - tabulate
+    - tqdm
+    - pillow
+    - notebook
+    - jupyterlab
+    - matplotlib
+    - seaborn
+    - ipywidgets

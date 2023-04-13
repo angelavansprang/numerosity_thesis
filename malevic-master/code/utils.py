@@ -729,6 +729,15 @@ def get_randoms_twopatches(patches):
     return patch_id1, patch_id2, 0
 
 
+def get_random_black_twopatches(patches):
+    keys = list(patches.keys())
+    black_patches = list(range(-1, 49))
+    for key in keys:
+        black_patches.remove(key)
+    patch_id1, patch_id2 = random.sample(black_patches, 2)
+    return patch_id1, patch_id2, 0
+
+
 def get_samecolor_twopatches(patches, color="red"):
     # The available colors are "white", "blue", "red", "yellow" & "green"
     # If no 2 patches of the same color are available, then the label returned is -1
@@ -773,6 +782,28 @@ def get_sameshape_twopatches(patches, shape="triangle"):
     return -1, -1, -1
 
 
+def find_non_neighbors_twopatches(patches):
+    """input:
+    patches (dict): keys = patch numbers ([0, 49]), values = boxes on patch
+
+    returns:
+    (int) patch_id, (int) patch_id, (0, 1) binary label indicating same object
+    """
+    keys = list(patches.keys())
+    patch_id1 = random.sample(keys, 1)[0]
+    neighbors = get_neighboring_patches(patch_id1)
+    patch_id2 = patch_id1
+    while patch_id2 == patch_id1 or patch_id2 in neighbors:
+        patch_id2 = random.sample(keys, 1)[0]
+    boxes1 = patches[patch_id1]
+    boxes2 = patches[patch_id2]
+    for box1 in boxes1:
+        for box2 in boxes2:
+            if box1["object_id"] == box2["object_id"]:
+                return patch_id1, patch_id2, 1
+    return patch_id1, patch_id2, 0
+
+
 def build_dataloader_twopatches(
     dataset,
     layer,
@@ -809,7 +840,6 @@ def build_dataloader_twopatches(
         return z, label
 
     # class2label, label2class = get_class_colorshape(objective)
-
     repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
 
     print(f"Will try to open representations of {dataset} of split {split}")
@@ -851,6 +881,27 @@ def build_dataloader_twopatches(
                     z, label = stack_reprs_2patches(patch1, patch2, label, repr)
                     inputs.append(z)
                     targets.append(label)
+                elif mode == "normal_with_black":
+                    # find 4 repr patch duo's: hard positives, hard negatives, random, black
+                    patch1, patch2, label = find_hard_positives_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
+
+                    patch1, patch2, label = get_hard_negatives_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
+
+                    patch1, patch2, label = get_randoms_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
+
+                    patch1, patch2, label = get_random_black_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
                 elif mode == "same_color":
                     patch1, patch2, label = get_samecolor_twopatches(patches)
                     z, label = stack_reprs_2patches(patch1, patch2, label, repr)
@@ -861,17 +912,40 @@ def build_dataloader_twopatches(
                     z, label = stack_reprs_2patches(patch1, patch2, label, repr)
                     inputs.append(z)
                     targets.append(label)
+                elif mode == "distance":
+                    patch1, patch2, label = find_non_neighbors_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
+
+                    patch1, patch2, label = find_hard_positives_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
             elif split == "test":
-                nodes = list(nodes)
-                for patch1 in nodes:
-                    for patch2 in nodes:
-                        if patch2 > patch1:
-                            box1 = patches[patch1][0]
-                            box2 = patches[patch2][0]
-                            label = box1["object_id"] == box2["object_id"]
-                            z, label = stack_reprs_2patches(patch1, patch2, label, repr)
-                            inputs.append(z)
-                            targets.append(label)
+                if mode == "distance":
+                    patch1, patch2, label = find_non_neighbors_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
+
+                    patch1, patch2, label = find_hard_positives_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
+                else:
+                    nodes = list(nodes)
+                    for patch1 in nodes:
+                        for patch2 in nodes:
+                            if patch2 > patch1:
+                                box1 = patches[patch1][0]
+                                box2 = patches[patch2][0]
+                                label = box1["object_id"] == box2["object_id"]
+                                z, label = stack_reprs_2patches(
+                                    patch1, patch2, label, repr
+                                )
+                                inputs.append(z)
+                                targets.append(label)
 
     if amnesic_obj is not None:  # TODO: Check if this works
         amnesic_inputs = []

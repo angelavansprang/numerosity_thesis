@@ -75,7 +75,7 @@ if __name__ == "__main__":
         device,
         model,
         preprocess,
-        dataset="posmo",
+        dataset="sup1mo",
         to_store=True,
         balance_objective=None,
         remove_key=None,
