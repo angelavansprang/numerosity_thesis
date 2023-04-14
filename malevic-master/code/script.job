@@ -2,7 +2,7 @@
 
 #SBATCH --partition=gpu
 #SBATCH --gpus=1
-#SBATCH --job-name=object_det
+#SBATCH --job-name=new_patches
 #SBATCH --nodes=1
 #SBATCH --time=01:00:00
 #SBATCH --output=job_logs/slurm_output_%A.out
@@ -24,7 +24,8 @@ cd $HOME/MALeViC/code
 
 # srun python transformer_patches.py
 # srun python train_probe_twopatches.py --dataset="pos" --objective="binding_problem" --modelname="MLP2" --padding_up_to=30 --mode="normal_with_black" --save_models
-srun python train_object_detector.py --dataset="pos" --modelname="MLP2" --patch_per_img=3 --save_models
+# srun python train_object_detector.py --dataset="pos" --modelname="MLP2" --patch_per_img=3 --save_models
+srun python -u transformer_patches.py
 
 # srun python train_probe_twopatches.py --objective="binding_problem" --evaluate_only --dataset_totrain="pos" --dataset_totest="sup1mo" --modelname="MLP2" --padding_up_to=30 --mode="normal"
 # srun python train_probe_twopatches.py --objective="binding_problem" --evaluate_only --dataset_totrain="pos" --dataset_totest="posmo" --modelname="MLP2" --padding_up_to=30 --mode="normal"

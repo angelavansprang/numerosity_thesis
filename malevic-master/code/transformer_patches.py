@@ -87,7 +87,7 @@ def get_all_patches_with_objects(img_filename, dataset, split):
             number = i + j * 7
             patch = (x, y, x + int(width / 7), y + int(height / 7))
             for box in boxes:
-                if check_box_in_patch(patch, box["box"]):
+                if check_box_in_patch(patch, box):
                     patches[number].append(box)
     return patches
 
@@ -141,14 +141,74 @@ def store_patches_dataset(dataset):
 def check_box_in_patch(patch, box):
     """
     patch: format (top-left x, top-left y, bottom-right x, bottom-right y) e.g. [608, 969, 902, 1117]
-    box (list): format (top-left x, top-left y, bottom-right x, bottom-right y) e.g. [608, 969, 902, 1117]
+    box (dict): box["box"] has as format (top-left x, top-left y, bottom-right x, bottom-right y) e.g. [608, 969, 902, 1117]
     """
     tlx_patch, tly_patch, brx_patch, bry_patch = patch
-    tlx, tly, brx, bry = box
-    if tlx >= brx_patch or brx <= tlx_patch or tly_patch >= bry or bry_patch <= tly:
-        return False
-    else:
-        return True
+    if box["shape"] != "triangle":
+        tlx, tly, brx, bry = box["box"]
+        if tlx >= brx_patch or brx <= tlx_patch or tly_patch >= bry or bry_patch <= tly:
+            return False
+        else:
+            return True
+    else:  # the box is a triangle
+        blx_patch = tlx_patch
+        bly_patch = bry_patch
+        trx_patch = brx_patch
+        try_patch = tly_patch
+        if box["rotation"] == "vert":
+            tlx, tly, blx, bly, rmx, rmy = box["box"]
+            if (
+                brx_patch <= tlx
+                or bry_patch <= tly
+                or tlx_patch >= rmx
+                or tly_patch >= bly
+            ):
+                return False
+            else:
+                if tlx_patch >= blx and tlx_patch <= rmx:
+                    if tly_patch >= bly + ((rmy - bly) / (rmx - blx)) * (
+                        tlx_patch - blx
+                    ):  # check lower edge triangle
+                        return False
+                elif trx_patch >= blx and trx_patch <= rmx:
+                    if try_patch >= bly + (
+                        (rmy - bly) / (rmx - blx) * (trx_patch - blx)
+                    ):  # check lower edge triangle
+                        if bly <= try_patch:
+                            return False
+                if blx_patch >= tlx and blx_patch <= rmx:
+                    if bly_patch <= tly + ((rmy - tly) / (rmx - tlx)) * (
+                        blx_patch - tlx
+                    ):  # check upper edge triangle
+                        return False
+                elif brx_patch >= tlx and brx_patch <= rmx:
+                    if bry_patch <= tly + ((rmy - tly) / (rmx - tlx)) * (
+                        brx_patch - tlx
+                    ):  # check upper edge triangle
+                        if tly >= bry_patch:
+                            return False
+            return True
+        elif box["rotation"] == "horiz":
+            tlx, tly, trx, triy, bmx, bmy = box["box"]
+            if (
+                tlx >= brx_patch
+                or tly >= bry_patch
+                or trx <= tlx_patch
+                or bmy <= tly_patch
+            ):
+                return False
+            else:
+                if trx_patch >= tlx and trx_patch <= bmx:
+                    if try_patch >= tly + ((bmy - tly) / (bmx - tlx)) * (
+                        trx_patch - tlx
+                    ):  # check left edge triangle
+                        return False
+                if tlx_patch >= bmx and tlx_patch <= trx:
+                    if tly_patch >= bmy + ((triy - bmy) / (trx - bmx)) * (
+                        tlx_patch - bmx
+                    ):  # check right edge triangle
+                        return False
+            return True
 
 
 def analyze_amount_objectpatches(dataset, split, balance_objective=None, to_save=False):
@@ -247,4 +307,4 @@ if __name__ == "__main__":
     #     if img_name[0] == "b" and img_name[1] == "b":
     #         open_image_withpatches(img_name, "sup1", "train", to_save=True)
 
-    store_patches_dataset("sup1mo")
+    store_patches_dataset("pos")
