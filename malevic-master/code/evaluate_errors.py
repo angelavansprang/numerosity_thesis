@@ -11,6 +11,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import argparse
 import matplotlib.pyplot as plt
 from sklearn import metrics
+import os
 
 
 def obtain_predictions(
@@ -33,15 +34,16 @@ def obtain_predictions(
     actual = []
     predicted = []
     for i in range(5):
-        model_path = f'../models/{modelname}_layer{layer}_{i}_{dataset}_{objective}_{"balanced" if balanced else "unbalanced"}_{"layernorm" if layernorm else "no_layernorm"}.pt'
-        model = utils.open_model(D_in, D_out, layernorm, modelname)
-        model.load_state_dict(torch.load(model_path))
-        model.eval()
+        model_path = f'../models/{modelname}_layer{layer}_{i}_{dataset}_{objective}_{"balanced" if balanced else "unbalanced"}_filtered_{"layernorm" if layernorm else "no_layernorm"}.pt'
+        if i == 0 or os.path.exists(model_path):
+            model = utils.open_model(D_in, D_out, layernorm, modelname)
+            model.load_state_dict(torch.load(model_path))
+            model.eval()
 
-        for x, y in loader_test:
-            out = model.forward(x)
-            actual += y.detach().cpu().numpy().tolist()
-            predicted += torch.argmax(out, dim=1).detach().cpu().numpy().tolist()
+            for x, y in loader_test:
+                out = model.forward(x)
+                actual += y.detach().cpu().numpy().tolist()
+                predicted += torch.argmax(out, dim=1).detach().cpu().numpy().tolist()
 
     return actual, predicted
 
@@ -125,10 +127,10 @@ def get_confusion_matrix(actual, predicted, class2label, img_name):
         disp = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
     disp.plot()
 
-    plt.title("Confusion matrix " + img_name)
-    img_name = "../plots/cm_" + img_name + ".png"
-    img_name.replace(" ", "_")
-    plt.savefig(img_name, bbox_inches="tight")
+    plt.title(img_name)
+    # img_name = "../plots/cm_" + img_name + ".png"
+    # img_name.replace(" ", "_")
+    # plt.savefig(img_name, bbox_inches="tight")
 
 
 if __name__ == "__main__":

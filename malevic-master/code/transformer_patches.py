@@ -10,8 +10,10 @@ from collections import defaultdict
 
 def open_image_withpatches(imgname, dataset, split, to_save=False):
     print(f"../data/{dataset}/images/{split}/{imgname}")
+    # print(f"../plots/bb_{dataset}_{split}_{imgname}")
     image = Image.open(
         f"../data/{dataset}/images/{split}/{imgname}"
+        # f"../plots/bb_{dataset}_{split}_{imgname}"
         # f"../examples/{dataset}/30patchimages/{imgname}"
     )
     my_dpi = 300
@@ -64,7 +66,8 @@ def open_image_withpatches(imgname, dataset, split, to_save=False):
     if to_save:
         plt.savefig(
             # f"../examples/{dataset}/patches_{imgname}",
-            f"../examples/{dataset}/30patchimages/patches_{imgname}",
+            f"../plots/patches_bb_{dataset}_{split}_{imgname}",
+            # f"../examples/{dataset}/30patchimages/patches_{imgname}",
             bbox_inches="tight",
             pad_inches=0,
         )
@@ -307,4 +310,5 @@ if __name__ == "__main__":
     #     if img_name[0] == "b" and img_name[1] == "b":
     #         open_image_withpatches(img_name, "sup1", "train", to_save=True)
 
-    store_patches_dataset("pos")
+    # store_patches_dataset("pos")
+    open_image_withpatches("275.png", "sup1", "val", to_save=True)

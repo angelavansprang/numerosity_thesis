@@ -36,7 +36,8 @@ def experiment_per_layer(
     elif objective == "n_objects":
         D_out = 5
     elif objective == "shape":
-        D_out = 5
+        # D_out = 5
+        D_out = 4
         single_patch = True
     elif objective == "color":
         D_out = 5

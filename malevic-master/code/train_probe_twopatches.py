@@ -60,53 +60,54 @@ def experiment_per_layer(
         max_iter = 5
 
     for layer, size in layer2size.items():
-        print(f"Started with layer {layer} of size {size}")
-        D_in = size  # TODO: CHANGE
+        if layer == 7:
+            print(f"Started with layer {layer} of size {size}")
+            D_in = size  # TODO: CHANGE
 
-        loader_train = utils.build_dataloader_twopatches(
-            dataset,
-            layer,
-            split="train",
-            threshold=padding_up_to,
-            amnesic_obj=amnesic_obj,
-            first_projection_only=first_projection_only,
-            mode=mode,
-        )
-        loader_val = utils.build_dataloader_twopatches(
-            dataset,
-            layer,
-            split="val",
-            threshold=padding_up_to,
-            amnesic_obj=amnesic_obj,
-            first_projection_only=first_projection_only,
-            mode=mode,
-        )
-        loader_test = utils.build_dataloader_twopatches(
-            dataset,
-            layer,
-            split="test",
-            threshold=padding_up_to,
-            amnesic_obj=amnesic_obj,
-            first_projection_only=first_projection_only,
-            mode=mode,
-        )
-
-        for i in range(max_iter):
-            model = utils.open_model(D_in, D_out, layernorm, modelname)
-            trainer = pl.Trainer(
-                accelerator="gpu",
-                callbacks=[EarlyStopping(monitor="val_loss", mode="min")],
-                enable_progress_bar=False,
-                log_every_n_steps=100,
+            loader_train = utils.build_dataloader_twopatches(
+                dataset,
+                layer,
+                split="train",
+                threshold=padding_up_to,
+                amnesic_obj=amnesic_obj,
+                first_projection_only=first_projection_only,
+                mode=mode,
             )
-            train_info = trainer.fit(model, loader_train, loader_val)
-            performance = trainer.test(dataloaders=loader_test)
+            loader_val = utils.build_dataloader_twopatches(
+                dataset,
+                layer,
+                split="val",
+                threshold=padding_up_to,
+                amnesic_obj=amnesic_obj,
+                first_projection_only=first_projection_only,
+                mode=mode,
+            )
+            loader_test = utils.build_dataloader_twopatches(
+                dataset,
+                layer,
+                split="test",
+                threshold=padding_up_to,
+                amnesic_obj=amnesic_obj,
+                first_projection_only=first_projection_only,
+                mode=mode,
+            )
 
-            results[layer].append(performance[0]["acc"])
-            if save_models:
-                save_models_path = f'../models/{modelname}_layer{layer}_{i}_{dataset}_{objective}_{"filtered_" + str({padding_up_to}) if padding_up_to is not None else "unfiltered"}_{"layernorm" if layernorm else "no_layernorm"}{"_amnesic" + str({args.amnesic_obj}) if args.amnesic_obj is not None else ""}{"_firstprojectiononly" if first_projection_only else ""}{"_normalmode" if mode is None else "_mode{mode}"}.pt'
-                torch.save(model.state_dict(), save_models_path)
-                print(f"Model layer {layer} - {i} saved")
+            for i in range(max_iter):
+                model = utils.open_model(D_in, D_out, layernorm, modelname)
+                trainer = pl.Trainer(
+                    accelerator="gpu",
+                    callbacks=[EarlyStopping(monitor="val_loss", mode="min")],
+                    enable_progress_bar=False,
+                    log_every_n_steps=100,
+                )
+                train_info = trainer.fit(model, loader_train, loader_val)
+                performance = trainer.test(dataloaders=loader_test)
+
+                results[layer].append(performance[0]["acc"])
+                if save_models:
+                    save_models_path = f'../models/{modelname}_layer{layer}_{i}_{dataset}_{objective}_{"filtered_" + str({padding_up_to}) if padding_up_to is not None else "unfiltered"}_{"layernorm" if layernorm else "no_layernorm"}{"_amnesic" + str({args.amnesic_obj}) if args.amnesic_obj is not None else ""}{"_firstprojectiononly" if first_projection_only else ""}{"_normalmode" if mode is None else f"_mode:{mode}"}.pt'
+                    torch.save(model.state_dict(), save_models_path)
+                    print(f"Model layer {layer} - {i} saved")
 
     return results
 
@@ -175,7 +176,9 @@ if __name__ == "__main__":
         choices=["binding_problem"],
         required=True,
     )
-    parser.add_argument("--modelname", choices=["linear_layer", "MLP", "MLP2"])
+    parser.add_argument(
+        "--modelname", choices=["linear_layer", "MLP", "MLP2", "MLP2_large"]
+    )
     parser.add_argument("--layernorm", action="store_true")
     parser.add_argument("--save_models", action="store_true")
     parser.add_argument("--padding_up_to", type=int, default=None)
@@ -183,7 +186,14 @@ if __name__ == "__main__":
     parser.add_argument("--first_projection_only", action="store_true")
     parser.add_argument(
         "--mode",
-        choices=["normal", "same_color", "same_shape", "normal_with_black"],
+        choices=[
+            "normal",
+            "same_color",
+            "same_shape",
+            "normal_with_black",
+            "balanced",
+            "original",
+        ],
         default="normal",
     )
     parser.add_argument("--evaluate_only", action="store_true")
@@ -218,7 +228,7 @@ if __name__ == "__main__":
             first_projection_only=args.first_projection_only,
             mode=args.mode,
         )
-        results_file = f'test_results_{args.modelname}_{args.dataset}_{args.objective}_{"filtered_" + str({args.padding_up_to}) if args.padding_up_to is not None else "unfiltered"}_{"layernorm" if args.layernorm else "no_layernorm"}{"_amnesic" + str({args.amnesic_obj}) if args.amnesic_obj is not None else ""}{"_firstprojectiononly" if args.first_projection_only else ""}{"_normalmode" if args.mode is None else "_mode{args.mode}"}.pickle'
+        results_file = f'test_results_{args.modelname}_{args.dataset}_{args.objective}_{"filtered_" + str({args.padding_up_to}) if args.padding_up_to is not None else "unfiltered"}_{"layernorm" if args.layernorm else "no_layernorm"}{"_amnesic" + str({args.amnesic_obj}) if args.amnesic_obj is not None else ""}{"_firstprojectiononly" if args.first_projection_only else ""}{"_normalmode" if args.mode is None else f"_mode_{args.mode}"}.pickle'
 
     results_path = "../results/"
     results_tosave = dict(results)

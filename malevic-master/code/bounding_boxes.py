@@ -164,7 +164,7 @@ def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
     if to_save:
         plt.axis("off")
         plt.savefig(
-            f"../examples/{dataset}/bb_{img_filename}",
+            f"../plots/bb_{dataset}_{split}_{img_filename}",
             # f"../examples/{dataset}/30patchimages/bb_{img_filename}",
             bbox_inches="tight",
             pad_inches=0,
@@ -179,4 +179,4 @@ if __name__ == "__main__":
     # for img in os.listdir("../examples/sup1/30patchimages"):
     #     make_img_boxes(img_filename=img, dataset="sup1", split="train", to_save=True)
 
-    make_img_boxes(img_filename="1.png", dataset="pos", split="test", to_save=False)
+    make_img_boxes(img_filename="275.png", dataset="sup1", split="val", to_save=True)

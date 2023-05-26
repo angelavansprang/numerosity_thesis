@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import os
 import pickle
 from torch.utils.data import DataLoader
+from itertools import permutations
 
 import models
 import transformer_patches
@@ -121,6 +122,13 @@ def open_model(D_in, D_out, layernorm, modelname):
         model = models.MLP(D_out=D_out, width=D_in, layernorm=layernorm)
     elif modelname == "MLP2":
         model = models.MLP2(input_size=D_in, output_size=D_out, layernorm=layernorm)
+    elif modelname == "MLP2_large":
+        model = models.MLP2(
+            input_size=D_in,
+            output_size=D_out,
+            hidden_size=D_in * 2,
+            layernorm=layernorm,
+        )
     return model
 
 
@@ -530,6 +538,7 @@ def build_dataloader_patchbased(
     """
     if objective == "color" or objective == "shape":
         class2label, label2class = get_class_colorshape(objective)
+        count_dict = defaultdict(lambda: 0)
     elif objective == "n_colors" or objective == "n_objects":
         labels = get_classlabel(dataset, split, objective)
         class2label, label2class = get_classlabel(
@@ -567,7 +576,7 @@ def build_dataloader_patchbased(
         # )  # TODO: MAYBE JUST STORE THESE?
         nodes = patches.keys()
 
-        if len(nodes) <= threshold:
+        if threshold == None or len(nodes) <= threshold:
             input = filter_repr(
                 layer,
                 nodes,
@@ -587,6 +596,7 @@ def build_dataloader_patchbased(
                 # print(box[objective])
                 if objective == "color" or objective == "shape":
                     label = label2class[box[objective]]
+                    count_dict[label] += 1
                 elif objective == "n_colors" or objective == "n_objects":
                     label = int(labels[int(img_id)][objective])
                     label = label2class[label]
@@ -611,6 +621,8 @@ def build_dataloader_patchbased(
 
     dataset_train = list(zip(inputs, targets))
     print("len dataset: ", len(dataset_train))
+    if objective == "color" or objective == "shape":
+        print(count_dict)
 
     if split == "train":
         dataloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
@@ -684,11 +696,13 @@ def find_hard_positives_twopatches(patches):
         patch_ids = boxes_dict[box]
         for patch_id in patch_ids:
             patches_left = copy.deepcopy(patch_ids)
+            patches_left.remove(patch_id)
             for neighbor in get_neighboring_patches(patch_id):
                 if neighbor in patches_left:
                     patches_left.remove(neighbor)
             if len(patches_left) > 0:
-                return patch_id, patches_left[0], 1
+                patch2 = random.sample(patches_left, 1)[0]
+                return patch_id, patch2, 1
 
     # if nothing is returned by now, there are no patches of the same object that are not neighbors.
     # then, just return -1, -1
@@ -712,6 +726,19 @@ def get_hard_negatives_twopatches(patches):
             ):  # Second loop to find another patch with same color and shape
                 for box2 in boxes2:
                     if box2["color"] == box_color and box2["shape"] == box_shape:
+                        if box2["object_id"] != box_id:
+                            return patch_id, patch_id2, 0
+    # if nothing is returned by now, there are no two patches with same color and shape
+    # instead, return two patches with either the same color or the same shape
+    for patch_id in keys:
+        boxes = patches[patch_id]
+        for box in boxes:
+            box_color = box["color"]
+            box_shape = box["shape"]
+            box_id = box["object_id"]
+            for patch_id2, boxes2 in patches.items():
+                for box2 in boxes2:
+                    if box2["color"] == box_color or box2["shape"] == box_shape:
                         if box2["object_id"] != box_id:
                             return patch_id, patch_id2, 0
     return -1, -1, 1
@@ -804,6 +831,28 @@ def find_non_neighbors_twopatches(patches):
     return patch_id1, patch_id2, 0
 
 
+def get_balanced_patches(patches):
+    patch_ids = list(patches.keys())
+    all_combinations = permutations(patch_ids, 2)
+
+    positive_combs = []
+    negative_combs = []
+    for patch1, patch2 in all_combinations:
+        same_object = False
+        boxes1, boxes2 = patches[patch1], patches[patch2]
+        for box1 in boxes1:
+            for box2 in boxes2:
+                if box1["object_id"] == box2["object_id"]:
+                    same_object = True
+                    positive_combs.append((patch1, patch2))
+        if not same_object:
+            negative_combs.append((patch1, patch2))
+
+    cap = min(len(positive_combs), len(negative_combs), 20)
+
+    return random.sample(positive_combs, cap), random.sample(negative_combs, cap)
+
+
 def build_dataloader_twopatches(
     dataset,
     layer,
@@ -821,7 +870,7 @@ def build_dataloader_twopatches(
     balanced (bool): whether the dataloaders should be made balanced (i.e. same number of instances per class)
     objective (string): either 'color' or 'shape'
     threshold (int): do not include images with more object patches than the threshold
-    mode: one of the following: {"normal", "same_color", "same_shape"}
+    mode: one of the following: {"normal", "same_color", "same_shape", "balanced", "best"}
     """
 
     def stack_reprs_2patches(patch1, patch2, label, repr):
@@ -856,6 +905,7 @@ def build_dataloader_twopatches(
     with open(file_name_patches, "rb") as f:
         objectpatches = pickle.load(f)
 
+    # successes_hard_negatives = []
     for img_id, repr in repr.items():
         patches = objectpatches[img_id]
         # patches = transformer_patches.get_all_patches_with_objects(
@@ -863,10 +913,55 @@ def build_dataloader_twopatches(
         # )  # TODO: MAYBE JUST STORE THESE?
         nodes = patches.keys()
 
-        if len(nodes) <= threshold:
+        if threshold == None or len(nodes) <= threshold:
             if split == "train" or split == "val":
                 if mode == "normal":
                     # find 3 repr patch duo's: hard positives, hard negatives, random
+                    patch1, patch2, label = find_hard_positives_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
+                    print("1: ", patch1, patch2, label)
+                    # successes_hard_negatives.append(0 if patch1 == -1 else 1)
+
+                    # z, label = stack_reprs_2patches(patch2, patch1, label, repr)
+                    # inputs.append(z)
+                    # targets.append(label)
+                    # print("1.2: ", patch2, patch1, label)
+
+                    patch1, patch2, label = get_hard_negatives_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
+                    print("2: ", patch1, patch2, label)
+
+                    # z, label = stack_reprs_2patches(patch2, patch1, label, repr)
+                    # inputs.append(z)
+                    # targets.append(label)
+                    # print("2.2: ", patch2, patch1, label)
+
+                    patch1, patch2, label = get_randoms_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch2, label, repr)
+                    inputs.append(z)
+                    targets.append(label)
+                    print("3: ", patch1, patch2, label)
+
+                    # z, label = stack_reprs_2patches(patch2, patch1, label, repr)
+                    # inputs.append(z)
+                    # targets.append(label)
+
+                    patch1, _, _ = get_randoms_twopatches(patches)
+                    z, label = stack_reprs_2patches(patch1, patch1, 1, repr)
+                    inputs.append(z)
+                    targets.append(label)
+                    print("4: ", patch1, patch1, label)
+
+                    # z, label = stack_reprs_2patches(patch2, patch1, label, repr)
+                    # inputs.append(z)
+                    # targets.append(label)
+                    # print("3.2: ", patch2, patch1, label)
+
+                elif mode == "original":
                     patch1, patch2, label = find_hard_positives_twopatches(patches)
                     z, label = stack_reprs_2patches(patch1, patch2, label, repr)
                     inputs.append(z)
@@ -881,6 +976,7 @@ def build_dataloader_twopatches(
                     z, label = stack_reprs_2patches(patch1, patch2, label, repr)
                     inputs.append(z)
                     targets.append(label)
+
                 elif mode == "normal_with_black":
                     # find 4 repr patch duo's: hard positives, hard negatives, random, black
                     patch1, patch2, label = find_hard_positives_twopatches(patches)
@@ -922,6 +1018,16 @@ def build_dataloader_twopatches(
                     z, label = stack_reprs_2patches(patch1, patch2, label, repr)
                     inputs.append(z)
                     targets.append(label)
+                elif mode == "balanced":
+                    positive_patches, negative_patches = get_balanced_patches(patches)
+                    for patch1, patch2 in positive_patches:
+                        z, label = stack_reprs_2patches(patch1, patch2, 1, repr)
+                        inputs.append(z)
+                        targets.append(label)
+                    for patch1, patch2 in negative_patches:
+                        z, label = stack_reprs_2patches(patch1, patch2, 0, repr)
+                        inputs.append(z)
+                        targets.append(label)
             elif split == "test":
                 if mode == "distance":
                     patch1, patch2, label = find_non_neighbors_twopatches(patches)
@@ -946,6 +1052,14 @@ def build_dataloader_twopatches(
                                 )
                                 inputs.append(z)
                                 targets.append(label)
+
+    # print(
+    #     "successes hard positives: ",
+    #     sum(successes_hard_negatives) / len(successes_hard_negatives),
+    #     sum(successes_hard_negatives),
+    #     "/",
+    #     len(successes_hard_negatives),
+    # )
 
     if amnesic_obj is not None:  # TODO: Check if this works
         amnesic_inputs = []
@@ -989,10 +1103,19 @@ if __name__ == "__main__":
     # device = "cuda" if torch.cuda.is_available() else "cpu"
     # model, preprocess = get_model_preprocess(device, model_type="ViT-B/32")
 
-    majority = {}
-    layer = 0
-    # for layer in range(15):
-    targets = build_dataloader_twopatches("pos", layer, split="test")
-    majority[layer] = targets.count(True) / len(targets)
+    # majority = {}
+    # layer = 0
+    # # for layer in range(15):
+    # targets = build_dataloader_twopatches("pos", layer, split="test")
+    # majority[layer] = targets.count(True) / len(targets)
 
-    print(majority)
+    # print(majority)
+
+    print("train: ")
+    build_dataloader_twopatches("pos", 7, split="train", mode="normal")
+
+    print("val: ")
+    build_dataloader_twopatches("pos", 7, split="val", mode="normal")
+
+    print("test: ")
+    build_dataloader_twopatches("pos", 7, split="test", mode="normal")

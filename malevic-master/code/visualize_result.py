@@ -7,7 +7,7 @@ import os
 layer2name = {
     0: "embed",
     1: "pos",
-    2: "l_norm",
+    2: "ln_0",
     3: "1",
     4: "2",
     5: "3",
@@ -20,7 +20,7 @@ layer2name = {
     12: "10",
     13: "11",
     14: "12",
-    15: "l_norm",
+    15: "ln_1",
     16: "output",
 }
 
@@ -66,7 +66,7 @@ def get_scores_eval_kernels(kernel_type, dataset, amn_objective):
 
 def plot_accuracy_probes(config):
     """input:
-    config (dict): contains the keys, "filenames", "labels", "fig_title", "save", "only_transformer"
+    config (dict): contains the keys, "filenames", "labels", "fig_title", "save", "only_transformer",
     """
     results = []
     xs = []
@@ -81,17 +81,6 @@ def plot_accuracy_probes(config):
     print(results)
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
-
-    # plt.rcParams.update(
-    #     {
-    #         "font.family": "serif",  # use serif/main font for text elements
-    #         # "text.usetex": True,  # use inline math for ticks
-    #         "pgf.rcfonts": False,  # don't setup fonts from rc parameters
-    #     }
-    # )
-
-    plt.rc("text", usetex=True)
-    plt.rc("font", family="serif")
 
     for result in results:
         x = [int(key) for key in result.keys()]
@@ -145,10 +134,14 @@ def plot_accuracy_probes(config):
 
     # plt.axhline(y=0.25, color="orange", linestyle="--")
     # plt.axhline(y=0.2, color="blue", linestyle="--")
-    ax.legend()
+    # plt.legend(loc="upper left")
+    # plt.legend()
+
+    plt.ylabel("Accuracy")
+    plt.xlabel("Layer")
 
     if config["entire_y_axis"]:
-        plt.ylim([0, 1.0])
+        plt.ylim([0.9, 1])
 
     if config["save"]:
         if config["img_name"] is not None:
@@ -199,8 +192,6 @@ def plot_accuracy_probes(config):
                 )
 
             imgname = imgname.replace("../results", "../plots")
-        plt.ylabel("Accuracy")
-        plt.xlabel("Layer")
         plt.savefig(imgname, bbox_inches="tight")
 
     plt.show()
@@ -208,21 +199,145 @@ def plot_accuracy_probes(config):
     return results
 
 
+def plot_results_counter(config):
+    """
+    config (dict): contains the keys, "filenames", "labels", "fig_title", "save", "only_transformer",
+    """
+    results = []
+    xs = []
+    errors = []
+    accuracies = []
+    # yerrors = []
+    # N_probes = len(config["filenames"])
+    fig_title = config["fig_title"]
+
+    for name in config["filenames"]:
+        results.append(open_results(name))
+
+    print(results)
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+
+    for result in results:
+        x = [int(key) for key in result.keys()]
+        while len(x) < 17:
+            x.append(np.nan)
+        error = [result[key]["error"] for key in result.keys()]
+        while len(error) < 17:
+            error.append(np.nan)
+        accuracy = [result[key]["accuracy"] for key in result.keys()]
+        while len(accuracy) < 17:
+            accuracy.append(np.nan)
+
+        xs.append(x)
+        errors.append(error)
+        accuracies.append(accuracy)
+
+    # print("x: ",/curacy)
+
+    for i in range(len(results)):
+        ax.errorbar(
+            xs[i],
+            accuracies[i],
+            linestyle="--",
+            # marker=marker[i],
+            marker="o",
+            label=config["labels"][i],
+            # color=color[i],
+        )
+        # ax.errorbar(
+        #     xs[i],
+        #     errors[i],
+        #     linestyle="--",
+        #     # marker=marker[i],
+        #     marker="o",
+        #     label="error",
+        #     # color=color[i],
+        # )
+
+    # original_results = "../results/test_results_MLP2_pos_n_objects_balanced_unfiltered_no_layernorm.pickle"
+    # original_results = "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle"
+    # original_results = open_results(original_results)
+    # x = [int(key) for key in original_results.keys()]
+    # while len(x) < 17:
+    #     x.append(np.nan)
+    # y = [
+    #     np.mean(original_results[key])
+    #     if original_results[key] is not np.nan
+    #     else np.nan
+    #     for key in original_results.keys()
+    # ]
+    # while len(y) < 17:
+    #     y.append(np.nan)
+    # yerr = [
+    #     np.std(original_results[key]) if original_results[key] is not np.nan else np.nan
+    #     for key in original_results.keys()
+    # ]
+    # while len(yerr) < 17:
+    #     yerr.append(np.nan)
+    # ax.errorbar(
+    #     x,
+    #     y,
+    #     yerr,
+    #     linestyle="--",
+    #     marker="o",
+    #     label="binding probe",
+    #     # color=color[i],
+    # )
+
+    plt.xticks(range(17), labels=layer2name.values(), rotation=45)
+    plt.suptitle(fig_title)
+
+    # plt.axhline(y=0.25, color="orange", linestyle="--")
+    # plt.axhline(y=0.2, color="blue", linestyle="--")
+    ax.legend()
+    plt.ylabel("Accuracy")
+    plt.xlabel("Layer")
+
+    if config["entire_y_axis"]:
+        plt.ylim([0, 1.0])
+
+    if config["save"]:
+        if config["img_name"] is not None:
+            imgname = "../plots/" + config["img_name"]
+
+        plt.savefig(imgname, bbox_inches="tight")
+
+    plt.show()
+
+
 if __name__ == "__main__":
+    import sys
+
+    sys.path.append("../")
+    import style_package
+
+    plt.style.use("style_package.presentation")
+
     config = {
-        "no_plots": 1,
+        "no_plots": 4,
         "filenames": [
             # "../results/new_test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
             # "../results/test_results_MLP2_sup1_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
             # "../results/test_results_MLP2_posmo_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
             # "../results/test_results_MLP2_sup1mo_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
-            # "../results/test_results_MLP2_pos_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
+            "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
             # "../results/test_results_MLP2_pos_binding_problem_filtered_{30}_no_layernorm_mode:normal_with_black?.pickle",
-            # "../results/test_results_MLP2_trainedonpos_testedonsup1_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
-            # "../results/test_results_MLP2_trainedonpos_testedonposmo_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
-            # "../results/test_results_MLP2_trainedonpos_testedonsup1mo_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
-            "../results/test_results_linear_layer_pos_n_objects_balanced_unfiltered_no_layernorm.pickle",
-            "../results/test_results_MLP2_pos_n_objects_balanced_unfiltered_no_layernorm.pickle",
+            "../results/test_results_MLP2_trainedonpos_testedonsup1_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
+            "../results/test_results_MLP2_trainedonpos_testedonposmo_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
+            "../results/test_results_MLP2_trainedonpos_testedonsup1mo_binding_problem_filtered_{30}_no_layernorm_mode{args.mode}.pickle",
+            # "../results/test_results_linear_layer_pos_n_objects_balanced_unfiltered_no_layernorm.pickle",
+            # "../results/test_results_MLP2_pos_n_objects_balanced_unfiltered_no_layernorm.pickle",
+            # "../results/test_results_linear_layer_pos_n_objects_balanced_filtered_{30}_single_patch_no_layernorm.pickle",
+            # "../results/test_results_MLP2_pos_n_objects_balanced_filtered_{30}_single_patch_no_layernorm.pickle",
+            # "../results/test_results_MLP2_pos_binding_problem_unfiltered_no_layernorm_mode{args.mode}.pickle",
+            # "../results/results_counter_pos_bindingprobe:MLP2.pickle",
+            # "../results/test_results_linear_layer_pos_shape_unbalanced_filtered_{30}_single_patch_no_layernorm.pickle",
+            # "../results/test_results_MLP2_pos_shape_unbalanced_filtered_{30}_no_layernorm.pickle",
+            # "../results/test_results_MLP2_sup1_color_balanced_filtered_{30}_no_layernorm.pickle",
+            # "../results/test_results_MLP2_pos_binding_problem_filtered_{30}_no_layernorm_mode:normal_with_black?.pickle",
+            # "../results/test_results_linear_layer_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
+            # "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle",
         ],
         "labels": [
             # "no color",
@@ -235,28 +350,36 @@ if __name__ == "__main__":
             # "linear probe",
             # "MLP probe",
             # '"poly" kernel',
-            # "diff color, diff shape",
+            "diff color, diff shape",
             # "diff color, diff shape v2",
-            # "diff color, same shape",
-            # "same color, diff shape",
-            # "same color, same shape",
-            "linear",
-            "non-linear",
+            "diff color, same shape",
+            "same color, diff shape",
+            "same color, same shape",
+            # "linear",
+            # "non-linear",
+            # "shape",
+            # "color",
+            # "binding problem",
+            # "object detection",
         ],
         # "labels": ["MLP (sup1)"],
-        "fig_title": "Probe accuracy on number of objects",
-        "save": False,
-        "img_name": "n_objects.png",  # else: None
+        "fig_title": "Evaluating binding probes on different data",
+        "save": True,
+        "img_name": "binding_probes_differentdata.png",  # else: None
         "only_transformer": False,
-        "entire_y_axis": True,
+        "entire_y_axis": False,
+        "counter": False,
     }
 
-    results = plot_accuracy_probes(config)
-    for i, result in enumerate(results):
-        print(
-            f"Final accuracy {i}: {np.mean(result[16]):.4f} ± {np.std(result[16]):.4f}"
-        )
-        max_i = np.argmax([np.mean(seq) for seq in result.values()])
-        print(
-            f"Highest accuracy {i}: {np.mean(result[max_i]):.4f} ± {np.std(result[max_i]):.4f}"
-        )
+    if not config["counter"]:
+        results = plot_accuracy_probes(config)
+        for i, result in enumerate(results):
+            print(
+                f"Final accuracy {i}: {np.mean(result[16]):.4f} ± {np.std(result[16]):.4f}"
+            )
+            max_i = np.argmax([np.mean(seq) for seq in result.values()])
+            print(
+                f"Highest accuracy {i}: {np.mean(result[max_i]):.4f} ± {np.std(result[max_i]):.4f}"
+            )
+    else:
+        results = plot_results_counter(config)
