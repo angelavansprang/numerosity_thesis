@@ -255,35 +255,35 @@ def plot_results_counter(config):
         #     # color=color[i],
         # )
 
-    # original_results = "../results/test_results_MLP2_pos_n_objects_balanced_unfiltered_no_layernorm.pickle"
+    original_results = "../results/test_results_MLP2_pos_n_objects_balanced_unfiltered_no_layernorm.pickle"
     # original_results = "../results/test_results_MLP2_pos_binding_problem_unbalanced_filtered_{30}_no_layernorm.pickle"
-    # original_results = open_results(original_results)
-    # x = [int(key) for key in original_results.keys()]
-    # while len(x) < 17:
-    #     x.append(np.nan)
-    # y = [
-    #     np.mean(original_results[key])
-    #     if original_results[key] is not np.nan
-    #     else np.nan
-    #     for key in original_results.keys()
-    # ]
-    # while len(y) < 17:
-    #     y.append(np.nan)
-    # yerr = [
-    #     np.std(original_results[key]) if original_results[key] is not np.nan else np.nan
-    #     for key in original_results.keys()
-    # ]
-    # while len(yerr) < 17:
-    #     yerr.append(np.nan)
-    # ax.errorbar(
-    #     x,
-    #     y,
-    #     yerr,
-    #     linestyle="--",
-    #     marker="o",
-    #     label="binding probe",
-    #     # color=color[i],
-    # )
+    original_results = open_results(original_results)
+    x = [int(key) for key in original_results.keys()]
+    while len(x) < 17:
+        x.append(np.nan)
+    y = [
+        np.mean(original_results[key])
+        if original_results[key] is not np.nan
+        else np.nan
+        for key in original_results.keys()
+    ]
+    while len(y) < 17:
+        y.append(np.nan)
+    yerr = [
+        np.std(original_results[key]) if original_results[key] is not np.nan else np.nan
+        for key in original_results.keys()
+    ]
+    while len(yerr) < 17:
+        yerr.append(np.nan)
+    ax.errorbar(
+        x,
+        y,
+        yerr,
+        linestyle="--",
+        marker="o",
+        label="non-linear probe",
+        # color=color[i],
+    )
 
     plt.xticks(range(17), labels=layer2name.values(), rotation=45)
     plt.suptitle(fig_title)

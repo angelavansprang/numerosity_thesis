@@ -6,6 +6,7 @@ from PIL import Image
 import pickle
 import visualize_result
 import numpy as np
+import random
 
 import utils
 import utils_amnesic_probing
@@ -188,6 +189,51 @@ def experiment_per_layer(
     return results
 
 
+def experiment_final_layer(
+    dataset,
+    split,
+    objective,
+    to_save=False,
+):
+    final_layer = 16
+
+    repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
+    with open(repr_path, "rb") as f:
+        repr = pickle.load(f)
+
+    results = defaultdict(lambda: [])
+    labels = utils.make_labels_dict(dataset, split)
+
+    idx = 0
+    for img_id, reprs_img in repr.items():
+        if idx % 100 == 0:
+            print(f"{idx}/{len(repr)}")
+        img = torch.from_numpy(reprs_img[final_layer])
+        texts = []
+        words = " " + objective.replace("n_", "")
+        correct_n = int(labels[int(img_id)][objective])
+        if objective == "n_objects":
+            incorrect_n = random.choice([correct_n + i for i in [-3, -2, -1, 1, 2, 3]])
+        elif objective == "n_colors":
+            incorrect_n = random.choice([correct_n + i for i in [-2, -1, 1, 2]])
+        texts.append(str(correct_n) + words)
+        texts.append(str(incorrect_n) + words)
+        # print(texts)
+        # outcome = single_experiment(model, img, texts)
+        outcome1, outcome2 = single_experiment_prob(model, img, device, texts)
+        results[final_layer].append(np.absolute(outcome1 - outcome2))
+        idx += 1
+
+    if to_save:
+        results = dict(results)
+        # file_path = f'../results/clip_{dataset}_{split}{"_amnesic" + str(amnesic_obj) if amnesic_obj is not None else ""}.pickle'
+        file_path = f"../results/clip_{dataset}_{split}_{objective}_differences.pickle"
+        with open(file_path, "wb") as f:
+            pickle.dump(results, f)
+
+    return results
+
+
 # TODO: Make function that returns indication whether representation img is still good for CLIP:
 # argmax or so over different texts
 
@@ -209,6 +255,24 @@ def single_experiment(
     # print(probs)
     correct_outcome = torch.argmax(probs) == 0
     return 1 if correct_outcome else 0
+
+
+def single_experiment_prob(
+    model,
+    img_repr,
+    device,
+    texts=["geometric shapes", "mathematics", "city map", "piano", "revolution"],
+):
+    text = clip.tokenize(texts).to(device)
+    text_features = model.encode_text(text)
+    # print("shape text_features: ", text_features.shape)
+    # print("shape img_features: ", img_repr.shape)
+
+    cosi = torch.nn.CosineSimilarity()
+    output = cosi(img_repr, text_features)
+
+    probs = output.softmax(dim=-1)
+    return probs[0].item(), probs[1].item()
 
 
 def open_results(dataset, split, amnesic_obj, first_projection_only):
@@ -259,6 +323,51 @@ def visualize_results(dataset, split, first_projection_only, to_save=False):
     # plt.show()
 
 
+def show_example(img_id, split, dataset, objective, model, device):
+    repr_path = f"../data/{dataset}/representations/{dataset}_{split}_visual.pickle"
+    with open(repr_path, "rb") as f:
+        repr = pickle.load(f)
+
+    labels = utils.make_labels_dict(dataset, split)
+    reprs_img = repr[img_id]
+    img = torch.from_numpy(reprs_img[16])
+    texts = []
+    words = " " + objective.replace("n_", "")
+    correct_n = int(labels[int(img_id)][objective])
+    incorrect_n = random.choice([correct_n + i for i in [-2, -1, 1, 2]])
+    texts.append(str(correct_n) + words)
+    texts.append(str(incorrect_n) + words)
+    outcome = single_experiment_prob(model, img, device, texts)
+    img_path = f"../data/{dataset}/images/{split}/{img_id}.png"
+    img = np.array(Image.open(img_path))
+    plot_probs(img, texts, outcome)
+
+
+def plot_probs(img, texts, probs):
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    # fig.suptitle("Zero-Shot Classification MALeViC with CLIP")
+
+    ax1.imshow(img)
+    ax1.axis("off")
+
+    y = np.arange(2)
+    ax2.grid()
+    ax2.barh(y, probs, color="m", height=0.2),
+    ax2.invert_yaxis()
+    ax2.set_axisbelow(True)
+    ax2.set_yticks(y)
+    ax2.set_yticklabels(["true", "foil"])
+    ax2.set_xlabel("Probability")
+    ax2.grid()
+
+    for i, bar in enumerate(ax2.barh(y, probs)):
+        width = bar.get_width() / 2
+        label_y = bar.get_y() + bar.get_height() / 2
+        ax2.text(width, label_y, s=texts[i])
+
+    plt.show()
+
+
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, preprocess = utils.get_model_preprocess(device, model_type="ViT-B/32")
@@ -272,31 +381,40 @@ if __name__ == "__main__":
         choices=["train", "test", "val"],
         required=True,
     )
+    parser.add_argument(
+        "--objective", choices=["n_objects", "n_colors"], default="n_objects"
+    )
     parser.add_argument("--amnesic_obj", choices=["shape", "color"], default=None)
     parser.add_argument("--to_save", action="store_true")
     parser.add_argument("--first_projection_only", action="store_true")
     args = parser.parse_args()
 
     print("Started with experiment")
-    results = experiment_per_layer(
-        dataset=args.dataset,
-        split=args.split,
-        amnesic_obj=args.amnesic_obj,
-        to_save=args.to_save,
-        first_projection_only=args.first_projection_only,
+    results = experiment_final_layer(
+        args.dataset,
+        args.split,
+        args.objective,
+        args.to_save,
     )
+    # results = experiment_per_layer(
+    #     dataset=args.dataset,
+    #     split=args.split,
+    #     amnesic_obj=args.amnesic_obj,
+    #     to_save=args.to_save,
+    #     first_projection_only=args.first_projection_only,
+    # )
     print(
         f"Results {args.dataset}, {args.split}, {args.amnesic_obj}, {args.first_projection_only}: "
     )
     for layer, outcomes in results.items():
         print(f"    Accuracy layer {layer}: {sum(outcomes)/len(outcomes)}")
 
-    visualize_results(
-        dataset=args.dataset,
-        split=args.split,
-        first_projection_only=args.first_projection_only,
-        to_save=True,
-    )
+    # visualize_results(
+    #     dataset=args.dataset,
+    #     split=args.split,
+    #     first_projection_only=args.first_projection_only,
+    #     to_save=True,
+    # )
     # visualize_results(
     #     dataset="pos",
     #     split="train",
