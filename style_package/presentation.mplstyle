@@ -1,0 +1,16 @@
+axes.titlesize : 24
+axes.labelsize : 20
+figure.titlesize : 24
+legend.fontsize : 14
+lines.linewidth : 3
+lines.markersize : 8
+xtick.labelsize : 14
+ytick.labelsize : 16
+font.family : "STIXGeneral"
+mathtext.fontset : stix
+figure.edgecolor : '0.75'
+axes.facecolor : '0.97'
+grid.color : '0.85'
+axes.grid : True
+figure.autolayout : True
+grid.linestyle : "--"

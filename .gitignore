@@ -1,6 +1,8 @@
 /malevic-master/*
 !/malevic-master/code
 /malevic-master/code/*
+!/malevic-master/code/notebooks
+!/malevic-master/code/amnesic_probing
 !/malevic-master/code/train_probe.py
 !/malevic-master/code/utils.py
 !/malevic-master/code/visualize_result.py
@@ -11,36 +13,17 @@
 !/malevic-master/code/experiment_one_layer.py
 !/malevic-master/code/transformer_patches.py
 !/malevic-master/code/train_probe_twopatches.py
-!/malevic-master/code/amnesic_probing.py
-!/malevic-master/code/utils_amnesic_probing.py
-!/malevic-master/code/array_script.job
-!/malevic-master/code/lollol.job
+!/malevic-master/code/train_object_detector.py
 !/malevic-master/code/script.job
 !/malevic-master/code/clipscores.py
-!/malevic-master/code/eval_kernels.py
-!/malevic-master/code/run_kernels.py
-!/malevic-master/code/relaxed_inlp.py
-!/malevic-master/code/train_amnprobe.py
 !/malevic-master/code/counter.py
-!/malevic-master/code/research_amnesic.ipynb
-!/malevic-master/code/tuned_lens.ipynb
 !/malevic-master/results
 !/malevic-master/plots
 
-/amnesic_probing-main
-
-/PyJSONViewer-1.6.0
-
 /Transformer_MM_Explainability
-
-/VALSE-main
-
-/visual_genome_python_driver-master
 
 /tuned-lens-main
 
-# /finetune_clip/*
-# !/finetune_clip/train.py
 
 finetune_clip/data/images_countbench
 finetune_clip/data/images_valse
