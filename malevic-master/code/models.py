@@ -102,8 +102,6 @@ class MLP2(pl.LightningModule):
         D_out (int): number of final classes
         width (int): input size of representations
         output_dim (int): output size of MLP
-
-        NOTE: COPY OF ORIGINAL; a matrix of parameters works like a fully-connected layer, but no activation function and threshold value, so not really MLP?
         """
         super(MLP2, self).__init__()
         self.layernorm = layernorm

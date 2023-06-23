@@ -10,9 +10,6 @@ def convert_coordinate(p, resolution=1500):
     return ceil(ceil(float(p)) / 1024 * resolution)
 
 
-# obj is annotation of an object, img -- Pillow RGB image
-
-
 def get_rotation(obj, img, resolution):
     rr = convert_coordinate(obj["rr"], resolution)
     cc = convert_coordinate(obj["cc"], resolution)
@@ -47,7 +44,6 @@ def get_rotation(obj, img, resolution):
 
 
 def get_box(obj, resolution):
-
     rr = convert_coordinate(obj["rr"], resolution)
     cc = convert_coordinate(obj["cc"], resolution)
     r = convert_coordinate(obj["radius"], resolution)
@@ -149,7 +145,6 @@ def get_boxes(img_filename, dataset="sup1", split="train"):
 
 def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
     img_path = f"../data/{dataset}/images/{split}/{img_filename}"
-    # img_path = f"../examples/{dataset}/30patchimages/{img_filename}"
     boxes = get_boxes(img_filename, dataset, split)
 
     plt.rcParams["figure.figsize"] = (10, 10)
@@ -165,7 +160,6 @@ def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
         plt.axis("off")
         plt.savefig(
             f"../plots/bb_{dataset}_{split}_{img_filename}",
-            # f"../examples/{dataset}/30patchimages/bb_{img_filename}",
             bbox_inches="tight",
             pad_inches=0,
         )
@@ -175,8 +169,5 @@ def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
 
 if __name__ == "__main__":
     import os
-
-    # for img in os.listdir("../examples/sup1/30patchimages"):
-    #     make_img_boxes(img_filename=img, dataset="sup1", split="train", to_save=True)
 
     make_img_boxes(img_filename="275.png", dataset="sup1", split="val", to_save=True)

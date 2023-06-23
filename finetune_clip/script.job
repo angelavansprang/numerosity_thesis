@@ -2,7 +2,7 @@
 
 #SBATCH --partition=gpu
 #SBATCH --gpus=1
-#SBATCH --job-name=finetune
+#SBATCH --job-name=mal_finetune
 #SBATCH --nodes=1
 #SBATCH --time=10:00:00
 #SBATCH --output=job_logs/slurm_output_%A.out
@@ -15,4 +15,4 @@ module load Anaconda3/2021.05
 source activate thesis
 
 # Run code
-srun python -u train.py --num_epochs=10000 --batch_size=250 --valse --countbench --malevic --save_model
+srun python -u train.py --num_epochs=500 --batch_size=100 --valse --countbench --malevic --save_model

@@ -1,4 +1,4 @@
-# see https://github.com/openai/CLIP/issues/83
+# code based on https://github.com/openai/CLIP/issues/83
 import json
 from PIL import Image
 import sys
@@ -31,11 +31,7 @@ def get_model_preprocess(device, model_type="ViT-B/32"):
 
 
 def build_dataloaders(images, captions, foils, batch_size):
-    # print("len(images) : ", len(images))
-    # print("len(captions) :", len(captions))
-    # print("len(foils): ", len(foils))
     dataset = list(zip(images, captions, foils))
-    # print("len(dataset)", len(dataset))
 
     train_part = 0.8
     random.shuffle(dataset)
@@ -64,19 +60,19 @@ def get_dataset_VALSE(device, preprocess):
 
     for key, value in valid_data.items():
         img_path = global_img_path + str(value["dataset_idx"]) + ".jpg"
-        image = preprocess(Image.open(img_path)).to(device)
+        image = preprocess(Image.open(img_path))
 
         caption = value["caption"]
         correct_num = value["classes"]
         correct_word = num2words(correct_num)
         caption = caption.replace(str(correct_num), correct_word)
-        caption_tokenized = clip.tokenize(caption).to(device)
+        caption_tokenized = clip.tokenize(caption)
 
         foil = value["foil"]
         incorrect_num = value["classes_foil"]
         incorrect_word = num2words(incorrect_num)
         foil = foil.replace(str(incorrect_num), incorrect_word)
-        foil_tokenized = clip.tokenize(foil).to(device)
+        foil_tokenized = clip.tokenize(foil)
 
         images.append(image)
         captions.append(caption_tokenized)
@@ -127,7 +123,7 @@ def get_dataset_countbench(device, preprocess):
         except:
             pass
         else:
-            image = preprocess(img).to(device)
+            image = preprocess(img)
 
             image_url = overview[int(img_name.replace(".png", ""))]
             dict, *rest = [
@@ -136,7 +132,7 @@ def get_dataset_countbench(device, preprocess):
 
             caption = dict["text"]
             try:
-                caption_tokenized = clip.tokenize(caption).to(device)
+                caption_tokenized = clip.tokenize(caption)
             except:
                 pass
             else:
@@ -144,7 +140,7 @@ def get_dataset_countbench(device, preprocess):
                 choices.remove(dict["number"])
                 foil_int = random.choice(choices)
                 foil = caption.replace(num2words(dict["number"]), num2words(foil_int))
-                foil_tokenized = clip.tokenize(foil).to(device)
+                foil_tokenized = clip.tokenize(foil)
 
                 images.append(image)
                 captions.append(caption_tokenized)
@@ -154,8 +150,7 @@ def get_dataset_countbench(device, preprocess):
 
 
 def get_dataset_malevic(device, preprocess, dataset="pos", objective="n_objects"):
-    # data_location = f"../malevic-master/data/{dataset}/"
-    data_location = f"../MALeViC/data/{dataset}/"
+    data_location = f"../malevic-master/data/{dataset}/"
 
     images = []
     captions = []
@@ -181,11 +176,9 @@ def get_dataset_malevic(device, preprocess, dataset="pos", objective="n_objects"
             foil_int = random.choice(choices)
             foil = caption.replace(num2words(n_objects), num2words(foil_int))
 
-        image = preprocess(Image.open(data_location + "images/train/" + img_name)).to(
-            device
-        )
-        caption_tokenized = clip.tokenize(caption).to(device)
-        foil_tokenized = clip.tokenize(foil).to(device)
+        image = preprocess(Image.open(data_location + "images/train/" + img_name))
+        caption_tokenized = clip.tokenize(caption)
+        foil_tokenized = clip.tokenize(foil)
 
         images.append(image)
         captions.append(caption_tokenized)
@@ -212,7 +205,6 @@ def train(
     )
     min_valid_loss = np.inf
     last_update_epoch = 0
-    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=)
 
     for epoch in range(num_epochs):
         train_loss = 0
@@ -222,24 +214,11 @@ def train(
         for batch in train_loader:
             optimizer.zero_grad()
 
-            # images = torch.stack([items[0] for items in batch])
-            # captions = torch.stack([items[1] for items in batch]).squeeze()
-            # foils = torch.stack([items[2] for items in batch]).squeeze()
-            images = batch[0]
-            captions = batch[1].squeeze()
-            foils = batch[2].squeeze()
-
-            # print("train: images.shape: ", images.shape)
-            # print("train: captions.shape: ", captions.shape)
-            # print("train: foils.shape: ", foils.shape)
-            # print(f"train {epoch}: images: ", images)
-            # print(f"train {epoch}: captions: ", captions)
-            # print("train: foils: ", foils)
+            images = batch[0].to(device)
+            captions = batch[1].squeeze().to(device)
+            foils = batch[2].squeeze().to(device)
 
             logits_per_image, logits_per_text = model(images, captions)
-
-            # print(f"train {epoch}: logtis_per_image: ", logits_per_image)
-            # print(f"train {epoch}: logtis_per_text: ", logits_per_text)
 
             logits_per_image = (
                 logits_per_image.to(dtype=torch.float64) / model.logit_scale.exp()
@@ -249,7 +228,6 @@ def train(
             )
 
             ground_truth = torch.arange(len(images), dtype=torch.long, device=device)
-            # ground_truth = torch.ones(len(images), dtype=torch.long, device=device)
 
             clip_loss = (
                 loss_img(logits_per_image, ground_truth)
@@ -262,65 +240,33 @@ def train(
                 logits_per_foil.to(dtype=torch.float64) / model.logit_scale.exp()
             )
 
-            # epsilon = 1e-7
             count_loss = -torch.mean(
                 torch.log(
                     torch.exp(logits_per_text)
                     / (torch.exp(logits_per_text) + torch.exp(logits_per_foil))
                 )
             )
-            # count_loss = 0
-            # for i in range(len(images)):
-            #     eiet = logits_per_text[i]
-            #     eietcf = logits_per_foil[i]
-            #     count_loss -= torch.log(
-            #         torch.exp(eiet) / (torch.exp(eiet) + torch.exp(eietcf))
-            #     )
-            # count_loss = count_loss / len(images)
 
             total_loss = clip_loss + lamb * count_loss
-            # print("clip_loss: ", clip_loss)
-            # print("count_loss: ", count_loss)
-            # print("lamb: ", lamb)
-            # print("total_loss: ", total_loss)
-            # print("epoch: ", epoch, "; loss: ,", total_loss)
             train_loss += total_loss.item()
             train_count_loss += count_loss.item()
             train_clip_loss += clip_loss.item()
-            # print("train_loss: ", train_loss)
 
             total_loss.mean().backward()
             optimizer.step()
 
             del images, captions, foils
 
-            # train_loss += total_loss
-
-        # before_lr = optimizer.param_groups[0]["lr"]
-        # scheduler.step()
-        # after_lr = optimizer.param_groups[0]["lr"]
-
         valid_loss = 0
         valid_clip_loss = 0
         valid_count_loss = 0
         model.eval()
         for batch in val_loader:
-            # print("sizes batch: ", batch[0].shape, batch[1].shape, batch[2].shape)
-            images = batch[0]
-            captions = batch[1].squeeze()
-            foils = batch[2].squeeze()
-
-            # print("images.shape: ", images.shape)
-            # print("captions.shape: ", captions.shape)
-            # print("foils.shape: ", foils.shape)
-            # print(f"images {epoch}: ", images)
-            # print(f"captions {epoch}: ", captions)
-            # print("foils: ", foils)
+            images = batch[0].to(device)
+            captions = batch[1].squeeze().to(device)
+            foils = batch[2].squeeze().to(device)
 
             logits_per_image, logits_per_text = model(images, captions)
-
-            # print(f"eval {epoch}: logtis_per_image: ", logits_per_image)
-            # print(f"eval {epoch}: logtis_per_text: ", logits_per_text)
 
             logits_per_image = (
                 logits_per_image.to(dtype=torch.float64) / model.logit_scale.exp()
@@ -330,7 +276,6 @@ def train(
             )
 
             ground_truth = torch.arange(len(images), dtype=torch.long, device=device)
-            # ground_truth = torch.ones(len(images), dtype=torch.long, device=device)
 
             clip_loss = (
                 loss_img(logits_per_image, ground_truth)
@@ -348,15 +293,7 @@ def train(
                     / (torch.exp(logits_per_text) + torch.exp(logits_per_foil))
                 )
             )
-            # print("logits_per_text: ", torch.exp(logits_per_text))
-            # print("logits_per_foil: ", torch.exp(logits_per_foil))
-            # print(
-            #     "torch log: ",
-            #     torch.log(
-            #         torch.exp(logits_per_text)
-            #         / (torch.exp(logits_per_text) + torch.exp(logits_per_foil))
-            #     ),
-            # )
+
             total_loss = clip_loss + lamb * count_loss
 
             valid_loss += total_loss.item()
@@ -365,20 +302,9 @@ def train(
 
             del images, captions, foils
 
-            # print("training loss: ", train_loss)
-            # print("len(dataloader): ", len(train_loader))
-            # print(f"training loss: {train_loss.item()/len(train_loader)}")
-
         print(
             f"Epoch {epoch+1} \t\t Training Loss: {train_loss / len(train_loader)} \t\t Validation Loss: {valid_loss / len(val_loader)} \t\t Train Count Loss: {train_count_loss / len(train_loader)} \t\t Valid Count Loss: {valid_count_loss / len(val_loader)} \t\t Train Clip Loss: {train_clip_loss / len(train_loader)} \t\t Valid Clip Loss: {valid_clip_loss / len(val_loader)}"
         )
-
-        # if device == "cpu":
-        #     optimizer.step()
-        # else:
-        #     convert_models_to_fp32(model)
-        #     optimizer.step()
-        #     clip.model.convert_weights(model)
 
         if save_model:
             epsilon = 0.01
@@ -398,10 +324,10 @@ def train(
                         "loss": total_loss,
                     },
                     f"model_checkpoint/model_lambda{lamb}_{info_modelname}.pt",
-                )  # just change to your preferred folder/filename
+                )
 
-    if last_update_epoch - epoch > 50:
-        return
+        if last_update_epoch - epoch > 50:
+            return
 
 
 if __name__ == "__main__":

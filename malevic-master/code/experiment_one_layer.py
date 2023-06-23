@@ -20,13 +20,6 @@ def experiment_one_layer(
     padding_up_to=None,
     single_patch=False,
 ):
-    """#TODO: think about and change the option to save the trained models. This can be helpful
-    for testing, but then you should also store the trainers? maybe just save them as pickle files?
-    Then, need to include the path as argument?
-
-    padding_up_to (int): if set, then only the representations of the nodes with objects of the ViT are kept.
-                        the number determines the maximum number of patches allowed
-    """
     if objective == "n_colors":
         D_out = 4
     elif objective == "n_objects":
@@ -116,7 +109,6 @@ def experiment_one_layer(
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description="Train a probe on representations ViT of one layer"
     )

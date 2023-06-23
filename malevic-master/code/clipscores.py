@@ -16,73 +16,11 @@ sys.path.append("../../")
 import Transformer_MM_Explainability.CLIP.clip as clip
 
 
-# def get_clipscore(model, preprocess, texts, img_repr, from_step):
-#     """Get CLIP scores of texts and and img.
-#     Input:
-#     texts (list): containing strings
-#     img (Pillow img): retrieve with Image.open(img_path)
-#     from_step (int): next layer from the ViT for the image representation
-#     """
-#     text = clip.tokenize(texts).to(device)
-#     text_features = model.encode_text(text)
-
-#     # img = preprocess(img).unsqueeze(0).to(device)
-#     img_features = encode_image(img_repr, device, model, preprocess, from_step)
-
-#     cosi = torch.nn.CosineSimilarity()
-#     output = cosi(img_features, text_features)
-
-#     del image_features
-#     del img
-#     del text
-#     del text_features
-#     torch.cuda.empty_cache()
-#     return output
-
-#     # originally:
-#     logits_image, logits_text = model(
-#         img, text
-#     )  # logits_image and logits_text are equal(?)
-
-#     return logits_image
-
-
-# def get_probs_from_logits(logits):
-#     probs = logits.softmax(dim=-1)
-#     return [prob.item() for prob in probs[0]]
-
-
-# TODO: Make pipeline such that an image can enter anytime to be processed into final representation,
-# based on the layer it came from
-
-
 def encode_image(img, device, model, preprocess, from_step=1):
     """input:
     model (CLIP instance)
     """
     z = img.type(model.visual.conv1.weight.dtype)
-    # if from_step == 0:
-    # img = preprocess(img).unsqueeze(0).to(device)
-
-    # # First step: make patches by a 2d convolution with a kernel_size and stride of 32 (the patch size)
-    # # here, we get 768 patches of 7x7 pixels
-    # z = model.visual.conv1(z)  # shape = [*, width, grid, grid]
-
-    # # Second step: concatenate embeddings
-    # z = z.reshape(z.shape[0], z.shape[1], -1)  # shape = [*, width, grid ** 2]
-    # z = z.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
-    # print("1) Shape z: ", z.shape)
-
-    # z = torch.cat(
-    #     [
-    #         model.visual.class_embedding.to(z.dtype)
-    #         + torch.zeros(
-    #             z.shape[0], 1, z.shape[-1], dtype=z.dtype, device=z.device
-    #         ),
-    #         z,
-    #     ],
-    #     dim=1,
-    # )  # shape = [*, grid ** 2 + 1, width]
     if from_step == 1:
         # Third step: add positional embeddings
         z = torch.unsqueeze(z, 0)
@@ -95,15 +33,12 @@ def encode_image(img, device, model, preprocess, from_step=1):
 
         # Fifth step: through the transformer; maybe exploit this further?
         # !! Info, there are 12 layers in here
-        # print("2) Shape z: ", z.shape)
         z = z.permute(1, 0, 2)  # NLD -> LND
-
-    # if from_step < 4:
 
     for i, block in enumerate(
         model.visual.transformer.resblocks
-    ):  # deze loop vervangt:       z = model.visual.transformer(z)
-        if not from_step < 4 + i:  # TODO: check if this works!
+    ):  # this loop replaces:       z = model.visual.transformer(z)
+        if not from_step < 4 + i:
             continue
         if len(z.shape) == 2:
             z = torch.unsqueeze(z, 1)
@@ -165,13 +100,9 @@ def experiment_per_layer(
                     amnesic_z = z.flatten()
                     amnesic_repr.append(amnesic_z)
                 reprs_img = amnesic_repr
-            # print("Size one patch: ", reprs_img[0].shape)
             else:
                 reprs_img = [torch.from_numpy(z) for z in reprs_img]
-            reprs_img = torch.stack(
-                reprs_img
-            )  # TODO: MAKE LIST OF PATCHES BACK INTO ONE IMAGE
-            # print("Size after stacking: ", reprs_img.shape)
+            reprs_img = torch.stack(reprs_img)
             reprs_img = reprs_img.to(device)
             extrapolated_img = encode_image(
                 reprs_img, device, model, preprocess, from_step=layer + 1
@@ -181,7 +112,6 @@ def experiment_per_layer(
 
     if to_save:
         results = dict(results)
-        # file_path = f'../results/clip_{dataset}_{split}{"_amnesic" + str(amnesic_obj) if amnesic_obj is not None else ""}.pickle'
         file_path = f'../results/clip_{dataset}_{split}{"_amnesic" + str(amnesic_obj) if amnesic_obj is not None else ""}{"_firstprojectiononly" if first_projection_only else ""}.pickle'
         with open(file_path, "wb") as f:
             pickle.dump(results, f)
@@ -218,15 +148,12 @@ def experiment_final_layer(
             incorrect_n = random.choice([correct_n + i for i in [-2, -1, 1, 2]])
         texts.append(str(correct_n) + words)
         texts.append(str(incorrect_n) + words)
-        # print(texts)
-        # outcome = single_experiment(model, img, texts)
         outcome1, outcome2 = single_experiment_prob(model, img, device, texts)
         results[final_layer].append(np.absolute(outcome1 - outcome2))
         idx += 1
 
     if to_save:
         results = dict(results)
-        # file_path = f'../results/clip_{dataset}_{split}{"_amnesic" + str(amnesic_obj) if amnesic_obj is not None else ""}.pickle'
         file_path = f"../results/clip_{dataset}_{split}_{objective}_differences.pickle"
         with open(file_path, "wb") as f:
             pickle.dump(results, f)
