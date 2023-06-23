@@ -26,6 +26,5 @@
 
 /tuned-lens-main
 
-
 finetune_clip/data/images_countbench
-finetune_clip/data/images_valse
+# finetune_clip/data/images_valse
