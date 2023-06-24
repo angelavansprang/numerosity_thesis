@@ -8,11 +8,11 @@ import pickle
 from collections import defaultdict
 
 
-def open_image_withpatches(imgname, dataset, split, to_save=False):
-    print(f"../data/{dataset}/images/{split}/{imgname}")
+def open_image_withpatches(imgname, dataset, split, to_save=False, global_path=".."):
+    print(f"{global_path}/data/{dataset}/images/{split}/{imgname}")
     # print(f"../plots/bb_{dataset}_{split}_{imgname}")
     image = Image.open(
-        f"../data/{dataset}/images/{split}/{imgname}"
+        f"{global_path}/data/{dataset}/images/{split}/{imgname}"
         # f"../plots/bb_{dataset}_{split}_{imgname}"
         # f"../examples/{dataset}/30patchimages/{imgname}"
     )
@@ -66,7 +66,7 @@ def open_image_withpatches(imgname, dataset, split, to_save=False):
     if to_save:
         plt.savefig(
             # f"../examples/{dataset}/patches_{imgname}",
-            f"../plots/patches_bb_{dataset}_{split}_{imgname}",
+            f"{global_path}/plots/patches_bb_{dataset}_{split}_{imgname}",
             # f"../examples/{dataset}/30patchimages/patches_{imgname}",
             bbox_inches="tight",
             pad_inches=0,
@@ -75,10 +75,10 @@ def open_image_withpatches(imgname, dataset, split, to_save=False):
     # plt.show()
 
 
-def get_all_patches_with_objects(img_filename, dataset, split):
+def get_all_patches_with_objects(img_filename, dataset, split, global_path=".."):
     """New version: returns dictionary of patch numbers with box"""
-    img_path = f"../data/{dataset}/images/{split}/{img_filename}"
-    boxes = bounding_boxes.get_boxes(img_filename, dataset, split)
+    img_path = f"{global_path}/data/{dataset}/images/{split}/{img_filename}"
+    boxes = bounding_boxes.get_boxes(img_filename, dataset, split, global_path)
 
     img = Image.open(img_path)
     height, width = img.size

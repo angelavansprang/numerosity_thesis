@@ -14,13 +14,15 @@ from itertools import permutations
 
 import models
 import transformer_patches
+
+sys.path.append("/amnesic_probing/")
 import utils_amnesic_probing
 
 sys.path.append("../../")
 import Transformer_MM_Explainability.CLIP.clip as clip
 
 # GLOBAL VARIABLES
-global_path = ".."
+global_path = "../../"
 padding_up_to = 30
 
 # Use this dictionary to find the number of layers necessary for the linear probe,

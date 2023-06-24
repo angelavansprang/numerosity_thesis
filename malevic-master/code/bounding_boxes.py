@@ -122,8 +122,8 @@ def bbox_to_rect(bbox, color):
         )
 
 
-def get_boxes(img_filename, dataset="sup1", split="train"):
-    img_path = f"../data/{dataset}/images/{split}/{img_filename}"
+def get_boxes(img_filename, dataset="sup1", split="train", global_path=".."):
+    img_path = f"{global_path}/data/{dataset}/images/{split}/{img_filename}"
     annotation = utils.get_annotation(dataset=dataset, split=split)
     img = Image.open(img_path)
     img_size = img.size
@@ -143,8 +143,10 @@ def get_boxes(img_filename, dataset="sup1", split="train"):
     return boxes
 
 
-def make_img_boxes(img_filename, dataset="sup1", split="train", to_save=False):
-    img_path = f"../data/{dataset}/images/{split}/{img_filename}"
+def make_img_boxes(
+    img_filename, dataset="sup1", split="train", to_save=False, global_path=".."
+):
+    img_path = f"{global_path}/data/{dataset}/images/{split}/{img_filename}"
     boxes = get_boxes(img_filename, dataset, split)
 
     plt.rcParams["figure.figsize"] = (10, 10)
